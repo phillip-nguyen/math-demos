@@ -2,7 +2,9 @@
 <html>
   <head>
     <title>Graph Theory</title>
+    <link rel="stylesheet" href="http://ajax.googleapis.com/ajax/libs/jqueryui/1.10.3/themes/smoothness/jquery-ui.min.css"/>
     <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.10.1/jquery.min.js"></script>
+    <script src="http://ajax.googleapis.com/ajax/libs/jqueryui/1.10.3/jquery-ui.min.js"></script>
     <script src="http://cdnjs.cloudflare.com/ajax/libs/underscore.js/1.5.2/underscore-min.js"></script>
     <style>
       html, body { height: 95%; }
@@ -189,14 +191,9 @@
 
 	  var v = find_vertex(x, y);
 	  if (v) {
-	      var name = window.prompt("Enter the vertex name:", v.name);
-	      // Note: bug in Safari >= 5.1.  It returns '' on cancel.
-	      // Not really anything we can do about it, since '' is a valid
-	      // value for cost.
-	      if (name !== null) { 
-		  v.name = name; 
-		  draw_canvas();
-	      }
+	      $("#vertex-dialog")
+		  .data("vertex", v)
+		  .dialog("open");
 	      return;
 	  }
 	  
@@ -228,9 +225,8 @@
 	  // if there is an edge nearby.
 	  if (!v) {
 	      var e = find_edge(x, y);
-	      //console.log(JSON.stringify(e.point));
-	      selected_edge = e;
-	      held_edge = e;
+	      selected_edge = e; 
+	      held_edge = e; 
 	      draw_canvas();
 	  }
 
@@ -243,7 +239,7 @@
           // to see if we should initiate the position changing routine.
 	  } else {
 	      wait_for_long_click(x, y, function() { 
-		  held_vertex = selected_vertex;
+		  held_vertex = { vertex: selected_vertex, dx: selected_vertex.x - x, dy: selected_vertex.y - y };
 		  nascent_edge = false;
 		  draw_canvas();
 	      });
@@ -307,6 +303,8 @@
       function mouse_moved(event) {
 	  var x = event.pageX-$("#myCanvas").offset().left;
 	  var y = event.pageY-$("#myCanvas").offset().top;
+	  // While waiting for a long click, make sure that the mouse does not
+	  // move too far away from the initial click point.
 	  if (long_click.valid) {
 	      if (Math.abs(long_click.x - x) + Math.abs(long_click.y - y) > 10) {
 		  long_click.valid = false;
@@ -316,7 +314,7 @@
 	  // If there is a held vertex, then it will move with 
 	  // the mouse.
 	  if (held_vertex) {
-	      move_vertex(held_vertex, x, y);
+	      move_vertex(held_vertex.vertex, x + held_vertex.dx, y + held_vertex.dy);
 	      draw_canvas();
 	      return;
 	  }
@@ -354,26 +352,19 @@
 	      return;
 	  }
 
-	  
 	  var hover_edge = find_edge(x, y);
 	  if (hover_edge) {
 	      $('body').css('cursor', 'pointer');
-	      //near_points = [ hover_edge.point ];
 	  } else {
 	      $('body').css('cursor', 'default');
-	      //near_points = [];
-	  }
-	  
-	  /*
-	  near_points = [];
-	  _.each(edges, function(e) {
-	      var p = quadratic_bezier_near_point(e.v1, e.cp, e.v2, {x: x, y: y});
-	      near_points.push(p);
-	  });
-	  */
+	  }	  
 
+	  /* // DEBUG
+	  near_points = _.map(theGraph.edges, function(e) {
+	      return quadratic_bezier_near_point(e.v1, e.cp, e.v2, {x: x, y: y});
+	  });
 	  draw_canvas();
-	  
+	  */ 
       }
 
       // Moves vertex v to a new location, adjusting all connected edges.
@@ -561,7 +552,7 @@
       // found edge, the closest point to (x,y) on the edge, and
       // the deltas from (x,y) to the closest point.
       function find_edge(x, y, radius) {
-	  if (radius === undefined) radius = 8;
+	  if (radius === undefined) radius = 10;
 	  var r2 = radius*radius;
 	  for (var i = 0, len = theGraph.edges.length; i < len; i++) {
 	      var e = theGraph.edges[i];
@@ -623,7 +614,7 @@
 	      if (e.cost != undefined && e.cost != '') {
 		  var p = bezier(e.v1, e.cp, e.v2, 0.5);
 		  ctx.fillStyle = "#000";
-		  ctx.font = "20px sans-serif";
+		  ctx.font = "14px sans-serif";
 		  ctx.fillText(e.cost, p.x, p.y);
 	      }
 	  });
@@ -662,7 +653,7 @@
 	      ctx.strokeStyle = "#f00";
 	      ctx.shadowColor = 'transparent';
 	      ctx.beginPath();
-	      ctx.arc(held_vertex.x, held_vertex.y, 18, 0, 6.28319, false);
+	      ctx.arc(held_vertex.vertex.x, held_vertex.vertex.y, 20, 0, 6.28319, false);
 	      ctx.closePath();
 	      ctx.stroke();	      
 	  }
@@ -682,17 +673,17 @@
 	      }
 	  });
 
-	  /*
-	  // Draw the nearest points (debug)
-	  for (var i = 0, len = near_points.length; i < len; i++) {
-	      var v = near_points[i];
+	  /* // DEBUG
+	  // Draw the nearest point on each edge to the mouse cursor.
+	  ctx.fillStyle = "#000";
+	  _.each(near_points, function(v) {
 	      ctx.beginPath();
 	      ctx.arc(v.x, v.y, 4, 0, 6.28319, false);
 	      ctx.closePath();
-	      ctx.fillStyle = "#000";
 	      ctx.fill();
-	  }
+	  });
 	  */
+
       }
 
       function clear_canvas() {
@@ -713,15 +704,56 @@
       <canvas class="canvas" id="myCanvas"></canvas>
     </div>
 
+    <div id="vertex-dialog" title="Edit vertex">
+      <label for="vertex-name">Name:</label>
+      <input type="text" name="vertex-name" id="vertex-name" class="text ui-widget-content ui-corner-all"/>
+    </div>
+
     <script type="text/javascript">
       $(function() {
 	  init_canvas("#myCanvas");
+
+	  $("#vertex-dialog").dialog({
+	      autoOpen: false,
+	      height: 200,
+	      width: 350,
+	      modal: true,
+	      open: function() {
+		  $("#vertex-name")
+		      .val($(this).data("vertex").name)
+		      .select();
+	      },
+	      buttons: {
+		  "OK": function() {
+		      $(this).data("vertex").name = $("#vertex-name").val();
+		      $(this).dialog("close");
+		      draw_canvas();
+		  },
+		  "Cancel": function() {
+		      $(this).dialog("close");
+		  }
+	      }
+	  });
+
+	  $(document).delegate('.ui-dialog', 'keydown', function(e) {
+	      var tagName= e.target.tagName.toLowerCase();
+	      
+	      tagName = (tagName === 'input' && e.target.type === 'button') ? 'button' : tagName;
+	      
+	      if (e.which === $.ui.keyCode.ENTER && tagName !== 'textarea' && tagName !== 'select' && tagName !== 'button') {
+		  $(this).find('.ui-dialog-buttonset button').eq(0).trigger('click');
+		  return false;
+	      }
+	  });
+
 	  $(window).keydown(function(event) {
 	      var keycode = event.keyCode || event.which;
 	      if (keycode === 80) { // pressed "P"
 		  copy_to_clipboard(graph_to_pstricks());
 	      } else if (keycode === 8 || keycode === 46) {
-		  delete_selected_objects();
+		  if (!$("#vertex-dialog").dialog("isOpen")) {
+		      delete_selected_objects();
+		  }
 	      } else if (keycode === 27) {
 		  selected_edge = false;
 		  selected_vertex = false;
