@@ -545,20 +545,16 @@
 	  draw_canvas();
       }
 
-      // Searches the graph for a vertex within radius of (x,y).
+      // Searches the graph and returns the first vertex found whose distance
+      // from the point (x,y) is less than radius. 
+      // Returns undefined if no such vertex is found.
       function find_vertex(x, y, radius) {
-	  if (radius === undefined) {
-	      radius = 14;
-	  }
-	  var r2 = radius*radius;
-	  for (var i = 0, len = theGraph.vertices.length; i < len; i++) {
-	      var v = theGraph.vertices[i];
+	  if (radius === undefined) radius = 14;
+	  var rsq = radius*radius;
+	  return _.find(theGraph.vertices, function(v) {
 	      var d = Math.pow(v.x - x, 2) + Math.pow(v.y - y, 2);
-	      if (d <= r2) {
-		  return v;
-	      }
-	  }
-	  return false;
+	      return (d <= rsq);
+	  });
       }
 
       // This function returns an OBJECT which contains the 
@@ -617,16 +613,12 @@
 
 	  // Draw the edges.
 	  ctx.lineWidth = 3;
-	  for (var i = 0, len = theGraph.edges.length; i < len; i++) {
-	      var e = theGraph.edges[i];
+	  ctx.textBaseline = "alphabetic";
+	  _.each(theGraph.edges, function(e) {
 	      ctx.beginPath();
 	      ctx.moveTo(e.v1.x, e.v1.y);
 	      ctx.quadraticCurveTo(e.cp.x, e.cp.y, e.v2.x, e.v2.y);
-	      if (e === selected_edge.edge) {
-		  ctx.strokeStyle = "#f00";
-	      } else {
-		  ctx.strokeStyle = "#000";
-	      }
+	      ctx.strokeStyle = (e === selected_edge.edge) ? "#f00" : "#000";
 	      ctx.stroke();
 	      if (e.cost != undefined && e.cost != '') {
 		  var p = bezier(e.v1, e.cp, e.v2, 0.5);
@@ -634,19 +626,19 @@
 		  ctx.font = "20px sans-serif";
 		  ctx.fillText(e.cost, p.x, p.y);
 	      }
-	  }
+	  });
 	  
 	  // Draw the vertices.
-	  for (var i = 0, len = theGraph.vertices.length; i < len; i++) {
-	      var v = theGraph.vertices[i];
+	  ctx.shadowOffsetX = 2;
+	  ctx.shadowOffsetY = 2;
+	  ctx.shadowBlur = 5;
+	  ctx.lineWidth = 4;
+	  _.each(theGraph.vertices, function(v) {
 	      ctx.beginPath();
 	      // The hover_vertex is the vertex underneath the mouse cursor.
-	      // We draw this vertex slightly larger.
-	      if (v === hover_vertex) {
-		  ctx.arc(v.x, v.y, 12, 0, 6.28319, false);
-	      } else {
-		  ctx.arc(v.x, v.y, 10, 0, 6.28319, false);
-	      }
+	      // We draw the hover_vertex slightly larger.
+	      var size = (v === hover_vertex) ? 12 : 10;
+	      ctx.arc(v.x, v.y, size, 0, 6.28319, false);
 	      ctx.closePath();
 	      // Draw the selected vertex in different color.
 	      if (v === selected_vertex) {
@@ -656,40 +648,39 @@
 		  ctx.fillStyle = "#fff";
 		  ctx.strokeStyle = "#000";
 	      }
-	      ctx.lineWidth = 4;
 	      ctx.shadowColor = "#555";
-	      ctx.shadowOffsetX = 2;
-	      ctx.shadowOffsetY = 2;
-	      ctx.shadowBlur = 5;
 	      ctx.fill();
 	      ctx.shadowColor = 'transparent';
 	      ctx.stroke();
-	      // Draw a halo around a held (long-mouse-press) vertex 
-	      if (v === held_vertex) {
-		  ctx.beginPath();
-		  ctx.arc(v.x, v.y, 18, 0, 6.28319, false);
-		  ctx.closePath();
-		  ctx.lineWidth = 2;
-		  ctx.stroke();
-	      }
+
+	  });
+
+	  // Draw a halo around the held_vertex.  This is the vertex
+	  // is underneath long mouse click.
+	  if (held_vertex) {
+	      ctx.lineWidth = 2;
+	      ctx.strokeStyle = "#f00";
+	      ctx.shadowColor = 'transparent';
+	      ctx.beginPath();
+	      ctx.arc(held_vertex.x, held_vertex.y, 18, 0, 6.28319, false);
+	      ctx.closePath();
+	      ctx.stroke();	      
 	  }
 
 	  // Draw the vertex names
-	  for (var i = 0, len = theGraph.vertices.length; i < len; i++) {
-	      var v = theGraph.vertices[i];
+	  ctx.textBaseline = "middle";
+	  ctx.textAlign = "center"
+	  ctx.fillStyle = "#000";
+	  _.each(theGraph.vertices, function (v) {
 	      if (v.name !== undefined && v.name != '') {
-		  ctx.textBaseline = "middle";
-		  ctx.fillStyle = "#000";
 		  if (v === hover_vertex) {
 		      ctx.font = "bold 18px sans-serif";
-		      ctx.fillText(v.name, v.x-6, v.y);
 		  } else {
 		      ctx.font = "bold 14px sans-serif";
-		      ctx.fillText(v.name, v.x-5, v.y);
 		  }
+		  ctx.fillText(v.name, v.x+0.5, v.y);
 	      }
-	  }
-	  ctx.shadowBlur = 0;
+	  });
 
 	  /*
 	  // Draw the nearest points (debug)
