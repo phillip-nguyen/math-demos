@@ -57,6 +57,10 @@
 	  return [(-b+root)/(2*a), (-b-root)/(2*a)]; // two real roots
       }
 
+      // Returns a list of real solutions to the equation ax^3 + bx^2 + cx + d = 0.
+      // For the general case, uses numerical methods to find the first root,
+      // then polynomial division to reduce the equation, which is then solved
+      // with the quadratic formula.
       function solve_cubic(a, b, c, d) {
 	  // Take care of easily solved special cases.
 	  if (a === 0) {
@@ -169,17 +173,8 @@
 	  var canvas = $(name)[0];
 	  canvas.width = ""+$(name).width();
 	  canvas.height = ""+$(name).height();
-	  // Fix the coordinate system so that origin is in center of canvas
-	  // with y-axis pointing up and x-axis pointing right.
 	  var ctx = canvas.getContext("2d");
-	  
-	  //var min_dimension = Math.min(canvas.width, canvas.height);
-	  //canvas.scale = min_dimension / 25;
-	  
-	  //ctx.setTransform(scale, 0, 0, -scale, min_dimension / 2, min_dimension / 2);
-	  //ctx.setTransform(canvas.scale, 0, 0, -canvas.scale, canvas.width/2, canvas.height/2);
-	  //ctx.lineWidth=1/canvas.scale;
-	  
+	  	  
 	  //ctx.translate(0.5, 0.5);
 
 	  $(name).mousedown(click_on_canvas);
@@ -256,6 +251,8 @@
 	  nascent_edge = { v1: v, v2: false};
       }
 
+      // Sets a timer in order to determine if the user held the mouse
+      // button down for a certain duration of time.
       function wait_for_long_click(x, y, callback) {
 	  long_click = {x: x, y: y, valid: true};
 	  setTimeout(function() 
@@ -287,6 +284,9 @@
 	  draw_canvas();
       }
 
+      // Given the two endpoints p0 & p2 of a quadratic bezier curve, along with
+      // the location of a third point q = B(t) which lies on the curve, returns
+      // the location of the control point p1 that fits.
       function find_bezier_control_point(p0, p2, q, t) {
 	  var a = (1-t)*(1-t);
 	  var b = 2*(1-t)*t;
@@ -295,6 +295,7 @@
 		  y: (q.y - a*p0.y - c*p2.y) / b};
       }
 
+      // Returns a point on the quadratic bezier curve B(t).
       function bezier(p0, p1, p2, t) {
 	  var a = (1-t)*(1-t);
 	  var b = 2*(1-t)*t;
@@ -375,53 +376,21 @@
 	  
       }
 
+      // Moves vertex v to a new location, adjusting all connected edges.
       function move_vertex(v, x, y) {
-	  // Need to also recalculate the control points for
-	  // every edge that is connected to this vertex.
+	  // Don't do anything if vertex hasn't moved.
 	  if (v.x === x && v.y === y) return;
 	  v.x = x;
 	  v.y = y;
-	  var connected = connected_edges(v);
-	  _.each(connected, function(e) {
+	  // Need to also recalculate the control points for
+	  // every edge that is connected to this vertex.
+	  _.each(connected_edges(v), function(e) {
 	      if (e.straight) {
-		  e.cp = mid_point(e.v1, e.v2);
+		  e.cp = midpoint(e.v1, e.v2);
 	      } else {
 		  construct_cp_from_info(e);
 	      }
 	  });
-      }
-
-      function move_vertex2(v, x, y) {
-	  // Need to also recalculate the control points for
-	  // every edge that is connected to this vertex.
-	  if (v.x === x && v.y === y) return;
-	  var connected = connected_edges(v);
-	  var vnew = {x:x, y:y};
-	  _.each(connected, function(e) {
-	      var other = other_vertex(e, v);
-	      if (e.straight) {
-		  e.cp = mid_point(vnew, other);
-	      } else {
-		  var length = distance(e.v1, e.v2);
-		  var new_length = distance(other, vnew);
-		  var scale = new_length / length;
-		  var theta = compute_angle_from_points(other, v, vnew);
-
-		  e.cp.x -= other.x
-		  e.cp.y -= other.y
-		  		  
-		  e.cp.x *= scale;
-		  e.cp.y *= scale;		  
-
-		  e.cp.x = e.cp.x*Math.cos(theta) - e.cp.y*Math.sin(theta);
-		  e.cp.y = e.cp.x*Math.sin(theta) + e.cp.y*Math.cos(theta);
-
-		  e.cp.x += other.x;
-		  e.cp.y += other.y;
-	      }
-	  });
-	  v.x = x;
-	  v.y = y;
       }
 
       // Returns the angle between (v2-v1) and (v3-v1).
@@ -435,6 +404,7 @@
 	  return angle;
       }
 
+      // Returns a new vertex at the specified (x,y) coordinates.
       function new_vertex(x, y) {
 	  var vertex = { x: x, y: y};
 	  vertices.push(vertex);
@@ -442,22 +412,34 @@
 	  return vertex;
       }	  
 
-      function mid_point(p, q) {
+      // Returns the midpoint of two vertices.
+      function midpoint(p, q) {
 	  return {x:(p.x+q.x)/2, y:(p.y+q.y)/2};
       }
 
+      // Returns a new edge connection the two vertices.
       function new_edge(v1, v2) {
-	  var edge = { v1: v1, v2: v2, cp: mid_point(v1, v2), 
+	  var edge = { v1: v1, v2: v2, cp: midpoint(v1, v2), 
 		       cp_dist: 0, cp_ratio: 0.5, straight: true };
 	  edges.push(edge);
 	  return edge;
       }
-
+      
+      // Forces the edge e to be a straight line.
       function make_straight_edge(e) {
-	  e.cp = mid_point(e.v1, e.v2);
+	  e.cp = midpoint(e.v1, e.v2);
 	  e.straight = true;
       }
 
+      // This function computes and stores information about the control point
+      // for an edge.  The information recorded is
+      // 1. cp_dist - the perpendicular distance from the control point 
+      //    to the straight line segment between the edge vertices.
+      // 2. cp_ratio - the location of the closest point on the straight line
+      //    between the edge vertices to the control point, expressed as a
+      //    percentage of the length of the line segment.
+      // Information is stored inside the edge itself so that the control point
+      // can be reconstructed later if necessary.
       function compute_cp_info(e) {
 	  // vector a = cp - v1.
 	  var ax = e.cp.x - e.v1.x;
@@ -478,6 +460,8 @@
 	  }
       }
 
+      // This function computes the location of the control point for an edge
+      // based off of the information previously calculated by compute_cp_info.
       function construct_cp_from_info(e) {
 	  var ax = e.v2.x - e.v1.x;
 	  var ay = e.v2.y - e.v1.y;
@@ -493,6 +477,7 @@
 	  e.cp.y = anchor.y - e.cp_dist*ux;
       }
 
+      // Returns a string of pstricks code to draw the edge.
       function edge_to_pstricks(e) {
 	  var nodeA = String.fromCharCode(_.indexOf(vertices, e.v1) + 65);
 	  var nodeB = String.fromCharCode(_.indexOf(vertices, e.v2) + 65);
@@ -512,6 +497,7 @@
 	      +"]{"+nodeA+"}{"+nodeB+"}";
       }
 
+      // Returns a string of pstricks code to draw the vertex.
       function vertex_to_pstricks(v) {
 	  var canvas = $("#myCanvas")[0];
 	  var x = (v.x * 10 / canvas.width).toFixed(1);
@@ -520,6 +506,7 @@
 	  return "\\vertex{"+x+","+y+"}{"+name+"}";
       }
 
+      // Returns a block of pstricks code to draw the entire graph.
       function graph_to_pstricks() {
 	  var canvas = $("#myCanvas")[0];
 	  var w = 10, h = w * canvas.height / canvas.width;
@@ -535,6 +522,7 @@
 	  return code;
       }
 
+      // Displays a prompt to allow the user to copy text to the clipboard.
       function copy_to_clipboard(text) {
 	  var isMac = navigator.platform.toUpperCase().indexOf("MAC") !== -1;
 	  // Note that the Cmd unicode symbol is \u2318
@@ -542,6 +530,8 @@
       	  window.prompt("Copy to clipboard: Press "+copyCommand+", then Enter", text);
       }
 
+      // Removes the currently selected edge and vertex (if any) from the graph.
+      // If a vertex is removed, all the edges connected to it are also removed.
       function delete_selected_objects() {
 	  if (selected_edge) {
 	      edges = _.without(edges, selected_edge.edge)
@@ -555,6 +545,7 @@
 	  draw_canvas();
       }
 
+      // Searches the graph for a vertex within radius of (x,y).
       function find_vertex(x, y, radius) {
 	  if (radius === undefined) {
 	      radius = 14;
@@ -587,18 +578,22 @@
 	  return false;
       }
 	  
+      // Returns a list of all edges connected to vertex v.
       function connected_edges(v) {
 	  return _.filter(edges, function(e) { 
 	      return e.v1 === v || e.v2 === v; 
 	  });
       }
 		 
+      // If v is a vertex of edge, then returns the other vertex in the edge,
+      // or undefined if v is not actually in the edge.
       function other_vertex(edge, v) {
 	  if (edge.v1 === v) return edge.v2;
 	  if (edge.v2 === v) return edge.v1;
 	  return undefined;
       }
 
+      // Returns the distance between two vertices.
       function distance(v1, v2) {
 	  return Math.sqrt( (v2.x-v1.x)*(v2.x-v1.x) + (v2.y-v1.y)*(v2.y-v1.y) );
       }
@@ -645,8 +640,8 @@
 	  for (var i = 0, len = vertices.length; i < len; i++) {
 	      var v = vertices[i];
 	      ctx.beginPath();
-	      // Draw hover_vertex a bit larger
-	      // (when the mouse cursor is hovering above them)
+	      // The hover_vertex is the vertex underneath the mouse cursor.
+	      // We draw this vertex slightly larger.
 	      if (v === hover_vertex) {
 		  ctx.arc(v.x, v.y, 12, 0, 6.28319, false);
 	      } else {
@@ -674,7 +669,6 @@
 		  ctx.beginPath();
 		  ctx.arc(v.x, v.y, 18, 0, 6.28319, false);
 		  ctx.closePath();
-		  //ctx.strokeStyle = ctx.fillStyle;
 		  ctx.lineWidth = 2;
 		  ctx.stroke();
 	      }
@@ -684,10 +678,6 @@
 	  for (var i = 0, len = vertices.length; i < len; i++) {
 	      var v = vertices[i];
 	      if (v.name !== undefined && v.name != '') {
-		  //ctx.shadowColor = "#000";
-		  //ctx.shadowOffsetX = 0;
-		  //ctx.shadowOffsetY = 0;
-		  //ctx.shadowBlur = 5;
 		  ctx.textBaseline = "middle";
 		  ctx.fillStyle = "#000";
 		  if (v === hover_vertex) {
@@ -747,8 +737,9 @@
 		  draw_canvas();
 	      } else if (keycode === 83) { // pressed "S"
 		  if (selected_edge) {
-		      make_straight_edge(selected_edge);
+		      make_straight_edge(selected_edge.edge);
 		  }
+	      }
 	  });
       });
     </script>
