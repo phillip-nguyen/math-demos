@@ -25,7 +25,8 @@
     <script type="text/javascript">
       "use strict";
 
-      var vertices = [];
+      var theGraph = { vertices: [], edges: [] }
+
       var selected_vertex = false;
       var hover_vertex = false;
       var long_click = {};
@@ -33,7 +34,6 @@
       var nascent_edge = false;
       var near_points = [];
 
-      var edges = [];
       var selected_edge = false;
       var held_edge = false;
 
@@ -407,8 +407,8 @@
       // Returns a new vertex at the specified (x,y) coordinates.
       function new_vertex(x, y) {
 	  var vertex = { x: x, y: y};
-	  vertices.push(vertex);
-	  vertex.name = String.fromCharCode(_.indexOf(vertices, vertex) + 65);
+	  theGraph.vertices.push(vertex);
+	  vertex.name = String.fromCharCode(_.indexOf(theGraph.vertices, vertex) + 65);
 	  return vertex;
       }	  
 
@@ -421,7 +421,7 @@
       function new_edge(v1, v2) {
 	  var edge = { v1: v1, v2: v2, cp: midpoint(v1, v2), 
 		       cp_dist: 0, cp_ratio: 0.5, straight: true };
-	  edges.push(edge);
+	  theGraph.edges.push(edge);
 	  return edge;
       }
       
@@ -479,8 +479,8 @@
 
       // Returns a string of pstricks code to draw the edge.
       function edge_to_pstricks(e) {
-	  var nodeA = String.fromCharCode(_.indexOf(vertices, e.v1) + 65);
-	  var nodeB = String.fromCharCode(_.indexOf(vertices, e.v2) + 65);
+	  var nodeA = String.fromCharCode(_.indexOf(theGraph.vertices, e.v1) + 65);
+	  var nodeB = String.fromCharCode(_.indexOf(theGraph.vertices, e.v2) + 65);
 	  if (e.straight) {
 	      return "\\ncline{"+nodeA+"}{"+nodeB+"}";
 	  }
@@ -502,7 +502,7 @@
 	  var canvas = $("#myCanvas")[0];
 	  var x = (v.x * 10 / canvas.width).toFixed(1);
 	  var y = ((canvas.height - v.y) * 10 / canvas.width).toFixed(1);
-	  var name = String.fromCharCode(_.indexOf(vertices, v) + 65);
+	  var name = String.fromCharCode(_.indexOf(theGraph.vertices, v) + 65);
 	  return "\\vertex{"+x+","+y+"}{"+name+"}";
       }
 
@@ -512,10 +512,10 @@
 	  var w = 10, h = w * canvas.height / canvas.width;
 	  var code = "\\begin{pspicture}(0,0)("+w+","+h+")\n";
 	  code += "\\newcommand{\\vertex}[2]{\\cnodeput[framesep=2pt,shadow=true](#1){#2}{\\textsf{\\footnotesize#2}}}\n";
-	  _.each(vertices, function(v) {
+	  _.each(theGraph.vertices, function(v) {
 	      code += vertex_to_pstricks(v) + "\n";
 	  });
-	  _.each(edges, function(e) {
+	  _.each(theGraph.edges, function(e) {
 	      code += edge_to_pstricks(e) + "\n";
 	  });
 	  code += "\\end{pspicture}\n";
@@ -534,12 +534,12 @@
       // If a vertex is removed, all the edges connected to it are also removed.
       function delete_selected_objects() {
 	  if (selected_edge) {
-	      edges = _.without(edges, selected_edge.edge)
+	      theGraph.edges = _.without(theGraph.edges, selected_edge.edge)
 	      selected_edge = false;
 	  }
 	  if (selected_vertex) {
-	      edges = _.difference(edges, connected_edges(selected_vertex));
-	      vertices = _.without(vertices, selected_vertex);
+	      theGraph.edges = _.difference(theGraph.edges, connected_edges(selected_vertex));
+	      theGraph.vertices = _.without(theGraph.vertices, selected_vertex);
 	      selected_vertex = false;
 	  }
 	  draw_canvas();
@@ -551,8 +551,8 @@
 	      radius = 14;
 	  }
 	  var r2 = radius*radius;
-	  for (var i = 0, len = vertices.length; i < len; i++) {
-	      var v = vertices[i];
+	  for (var i = 0, len = theGraph.vertices.length; i < len; i++) {
+	      var v = theGraph.vertices[i];
 	      var d = Math.pow(v.x - x, 2) + Math.pow(v.y - y, 2);
 	      if (d <= r2) {
 		  return v;
@@ -567,8 +567,8 @@
       function find_edge(x, y, radius) {
 	  if (radius === undefined) radius = 8;
 	  var r2 = radius*radius;
-	  for (var i = 0, len = edges.length; i < len; i++) {
-	      var e = edges[i];
+	  for (var i = 0, len = theGraph.edges.length; i < len; i++) {
+	      var e = theGraph.edges[i];
 	      var p = quadratic_bezier_near_point(e.v1, e.cp, e.v2, {x: x, y: y});
 	      var sqdist = (p.x - x)*(p.x - x) + (p.y - y)*(p.y - y);
 	      if (sqdist <= r2) {
@@ -580,7 +580,7 @@
 	  
       // Returns a list of all edges connected to vertex v.
       function connected_edges(v) {
-	  return _.filter(edges, function(e) { 
+	  return _.filter(theGraph.edges, function(e) { 
 	      return e.v1 === v || e.v2 === v; 
 	  });
       }
@@ -617,8 +617,8 @@
 
 	  // Draw the edges.
 	  ctx.lineWidth = 3;
-	  for (var i = 0, len = edges.length; i < len; i++) {
-	      var e = edges[i];
+	  for (var i = 0, len = theGraph.edges.length; i < len; i++) {
+	      var e = theGraph.edges[i];
 	      ctx.beginPath();
 	      ctx.moveTo(e.v1.x, e.v1.y);
 	      ctx.quadraticCurveTo(e.cp.x, e.cp.y, e.v2.x, e.v2.y);
@@ -637,8 +637,8 @@
 	  }
 	  
 	  // Draw the vertices.
-	  for (var i = 0, len = vertices.length; i < len; i++) {
-	      var v = vertices[i];
+	  for (var i = 0, len = theGraph.vertices.length; i < len; i++) {
+	      var v = theGraph.vertices[i];
 	      ctx.beginPath();
 	      // The hover_vertex is the vertex underneath the mouse cursor.
 	      // We draw this vertex slightly larger.
@@ -675,8 +675,8 @@
 	  }
 
 	  // Draw the vertex names
-	  for (var i = 0, len = vertices.length; i < len; i++) {
-	      var v = vertices[i];
+	  for (var i = 0, len = theGraph.vertices.length; i < len; i++) {
+	      var v = theGraph.vertices[i];
 	      if (v.name !== undefined && v.name != '') {
 		  ctx.textBaseline = "middle";
 		  ctx.fillStyle = "#000";
