@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <style type="text/css">
+      input::-webkit-outer-spin-button,
+      input::-webkit-inner-spin-button {
+	  -webkit-appearance: none;
+	  margin: 0;
+      }
+      input{ 
+	  color: #0000cc; 
+	  border: 1px solid #ccc;
+	  -webkit-appearance: none;
+      }
+      input:focus{ 
+	  color: #0000cc; 
+	  border: 1px solid #5ebaed;
+	  box-shadow: 0 0 10px #5ebaed;
+	  outline: none;
+	  -webkit-appearance: none;
+      }
+      input[readonly] { 
+	  outline: none;
+	  border: 1px dashed #ccc;
+	  -webkit-appearance: none;
+      }
+      input[readonly]:focus { 
+	  outline: none;
+	  border: 1px dashed #ccc;
+	  box-shadow: none;
+	  -webkit-appearance: none;
+      }
+      .input { 
+	  font-size: 32px;
+	  width: 100px;
+	  text-align: center;
+      }
+      .biginput { 
+	  font-size: 32px;
+	  width: 150px;
+	  text-align: center;
+      }
+      .step {
+	  font-size: 32px;
+      }
+      .coeff {
+	  font-size: 32px;
+	  width: 100px;
+	  text-align: right;
+      }
+      .check {
+	  display: inline-block;
+	  border-radius: 50%;
+	  width: 32px;
+	  height: 32px;
+	  background-color: #00cc00;
+	  color: #ffff00;
+	  text-align: center;
+	  font-size: 26px;
+      }
+      .cross {
+	  display: inline-block;
+	  border-radius: 50%;
+	  width: 32px;
+	  height: 32px;
+	  background-color: #cc0000;
+	  color: #ff9999;
+	  text-align: center;
+	  font-size: 26px;
+      }
+      #walkthrough li {
+	  margin: 25px;
+      }
+
+    </style>
+    <script src="http://ajax.googleapis.com/ajax/libs/jquery/2.0.0/jquery.min.js"></script>
+    <script src="math.js"></script>
+    <script src="poly.js"></script>
+    <script type="text/javascript">
+      "use strict";
+      function randInt(min, max) {
+	  return Math.floor(Math.random() * (max - min + 1)) + min;
+      }
+
+      function randSign() {
+	  if (randInt(1,2) === 2) {
+	      return -1;
+	  } else {
+	      return 1;
+	  }
+      }
+
+      function signCharacter(x) {
+	  if (x < 0) {
+	      return '&#8722;';
+	  } else {
+	      return '+';
+	  }
+      }
+
+      function leadingSign(x) {
+	  if (x < 0) {
+	      return '&#8722;';
+	  }
+	  return '';
+      }
+
+      function htmlForPoly(p) {
+	  var html = '';
+	  var degree = p.length - 1;
+	  var firstTerm = true;
+	  for (var i = degree; i >= 0; i--) {
+	      var coeff = p[i];
+	      if (coeff === 0) {
+		  if (firstTerm && i === 0) {
+		      html += "0";
+		  }
+		  continue;
+	      }
+	      if (firstTerm) {
+		  html += leadingSign(coeff)
+		  firstTerm = false;
+	      } else {
+		  html += " " + signCharacter(coeff) + " ";
+	      }
+	      if (Math.abs(coeff) !== 1 || i === 0) {
+		  html += Math.abs(coeff);
+	      }
+	      if (i !== 0) {
+		  html += "<i>x</i>";
+	      } 
+	      if (i > 1) {
+		  html += "<sup>" + i + "</sup>";
+	      }
+	  }
+	  return html;
+      }	  
+
+
+      function stringForPoly(p) {
+	  var text = '';
+	  var degree = p.length - 1;
+	  var firstTerm = true;
+	  for (var i = degree; i >= 0; i--) {
+	      var coeff = p[i];
+	      if (coeff === 0) {
+		  if (firstTerm && i === 0) {
+		      text += "0";
+		  }
+		  continue;
+	      }
+	      if (firstTerm) {
+		  text += (coeff < 0) ? '-' : '';
+		  firstTerm = false;
+	      } else {
+		  text += " " + ((coeff < 0) ? '-' : '+') + " ";
+	      }
+	      if (Math.abs(coeff) !== 1 || i === 0) {
+		  text += Math.abs(coeff);
+	      }
+	      if (i !== 0) {
+		  text += "x";
+	      } 
+	      if (i > 1) {
+		  text += "^" + i;
+	      }
+	  }
+	  return text;
+      }	  
+
+
+      function do_factor() {
+	  var n = Number($("#number").val());
+	  alert(JSON.stringify(MATH.factor(n)));
+      }
+
+      function mark_correct(step) {
+	  $("#step"+step+"-grade").html('<div class="check">&#x2713;</div>');
+	  $(".ans"+step).prop('readonly', true);
+	  $(".ans"+step).css("background-color", "white");
+	  $(".ans"+step).unbind("change");
+      }
+
+      function mark_wrong(step) {
+	  $("#step"+step+"-grade").html('<div class="cross">&#x2718;</div>');
+	  $(".ans"+step).css("background-color", "pink");
+      }
+
+      function check_step1() {
+	  var ac = the_quadratic[0]*the_quadratic[2];
+	  var num = Number($("#ans1-a").val());
+	  if (ac === num) {
+	      mark_correct(1);
+	      show_step2();
+	  } else {
+	      mark_wrong(1);
+	  }
+      }
+
+      function check_step2() {
+	  var f1 = $("#ans2-a").val();
+	  var f2 = $("#ans2-b").val();
+	  if (f1 === '' || f2 === '') {
+	      $(".ans2").css("background-color", "white");
+	      return;
+	  }
+	  f1 = Number(f1);
+	  f2 = Number(f2);
+	  if (f1 + f2 === the_quadratic[1] && f1*f2 === the_quadratic[0]*the_quadratic[2]) {
+	      mark_correct(2);
+	      show_step3();
+	  } else {
+	      mark_wrong(2);
+	  }
+      }
+
+      function check_step3() {
+	  var a = $("#ans3-a").val();
+	  var b1 = $("#ans3-b").val();
+	  var b2 = $("#ans3-c").val();
+	  var c = $("#ans3-d").val();
+	  if (a == '' || b1 == '' || b2 == '' || c == '') {
+	      $(".ans3").css("background-color", "white");
+	      return;
+	  }
+	  a = Number(a);
+	  b1 = Number(b1);
+	  b2 = Number(b2);
+	  c = Number(c);
+	  if (a === the_quadratic[2] && c === the_quadratic[0] && b1*b2 === a*c && b1+b2 === the_quadratic[1]) {
+	      mark_correct(3);
+	      show_step4();
+	  } else {
+	      mark_wrong(3);
+	  }
+      }
+
+      function check_step4() {
+	  var ans4a = $("#ans4-a").val();
+	  var ans4b = $("#ans4-b").val();
+	  var ans4c = $("#ans4-c").val();
+	  var ans4d = $("#ans4-d").val();
+
+	  if (ans4a == '' || ans4b == '' || ans4c == '' || ans4d == '') {
+	      $(".ans4").css("background-color", "white");
+	      return;
+	  }
+
+	  var a = Number($("#ans3-a").val());
+	  var b1 = Number($("#ans3-b").val());
+	  var b2 = Number($("#ans3-c").val());
+	  var c = Number($("#ans3-d").val());
+
+	  var gcf1 = MATH.gcd(a, b1);
+	  if (a < 0) gcf1 = -gcf1;
+	  var gcf2 = MATH.gcd(b2, c);
+	  if (b2 < 0) gcf2 = -gcf2;
+	  var rem_poly = [b1/gcf1, a/gcf1];
+	  
+	  if (POLY.equals_simplified_polynomial(ans4a, [0, gcf1]) &&
+	      POLY.equals_simplified_polynomial(ans4b, rem_poly) &&
+	      POLY.equals_simplified_polynomial(ans4c, [gcf2]) &&
+	      POLY.equals_simplified_polynomial(ans4d, rem_poly)) {
+	      
+	      mark_correct(4);
+	      show_step5();
+	  } else {
+	      mark_wrong(4);
+	  }
+      }
+
+      function check_step5() {
+	  var ans5a = $("#ans5-a").val();
+	  var ans5b = $("#ans5-b").val();
+
+	  if (ans5a == '' || ans5b == '') {
+	      $(".ans5").css("background-color", "white");
+	      return;
+	  }
+	  
+	  var a = Number($("#ans3-a").val());
+	  var b1 = Number($("#ans3-b").val());
+	  var b2 = Number($("#ans3-c").val());
+	  var c = Number($("#ans3-d").val());
+
+	  var gcf1 = MATH.gcd(a, b1);
+	  if (a < 0) gcf1 = -gcf1;
+	  var gcf2 = MATH.gcd(b2, c);
+	  if (b2 < 0) gcf2 = -gcf2;
+	  var rem_poly = [b1/gcf1, a/gcf1];
+
+	  if ((POLY.equals_simplified_polynomial(ans5a, [gcf2, gcf1]) &&
+	       POLY.equals_simplified_polynomial(ans5b, rem_poly)) ||
+	      (POLY.equals_simplified_polynomial(ans5b, [gcf2, gcf1]) &&
+	       POLY.equals_simplified_polynomial(ans5a, rem_poly))) {
+	      
+	      mark_correct(5);
+	      show_step6();
+	  } else {
+	      mark_wrong(5);
+	  }
+
+      }
+
+      var the_quadratic;
+
+      function scale_poly(k, p) {
+	  for (var i = 0, len = p.length; i < len; i++) {
+	      p[i] *= k;
+	  }
+      }
+
+      function randChoice(list) {
+	  return list[Math.floor(Math.random()*list.length)];
+      }
+
+      function show_random_quadratic() {
+	  var a = randInt(1,12);
+	  var c = randInt(1,12);
+	  var pairs = MATH.factor_pairs(a*c);
+	  var pair = randChoice(pairs);
+	  var b1 = pair[0], b2 = pair[1];
+	  if (randSign() < 0) {
+	      c *= -1;
+	      b1 *= -1;
+	  }
+	  if (randSign() < 0) {
+	      b1 *= -1;
+	      b2 *= -1;
+	  }
+	  var b = b1+b2;
+
+	  var poly = [c, b, a];
+
+	  var gcf = poly.reduce(MATH.gcd);
+	  poly = [c/gcf, b/gcf, a/gcf];
+	  if (poly[2] < 0) {
+	      scale_poly(-1, poly);
+	  }
+
+
+	  $("#poly").html(htmlForPoly(poly))
+
+	  the_quadratic = poly;
+      }
+
+      function show_step2() {
+	  $("#walkthrough").append(
+	      '<li id="step2" class="step">'
+		  + 'Find two factors of the AC-product which sum to B:<br><p>'
+		  + '<input id="ans2-a" class="input ans2" type="text" autocomplete="off"></input>'
+		  + ' and '
+		  + '<input id="ans2-b" class="input ans2" type="text" autocomplete="off"></input>'
+		  + ' <span id="step2-grade"></span>'
+		  + '</li>'
+	  );
+
+	  $(".ans2").change(check_step2);
+	  $("#ans2-a").focus();
+      }
+
+      function show_step3() {
+	  $("#walkthrough").append(
+	      '<li id="step3" class="step">'
+		  + 'Rewrite the quadratic with four terms:<br><p>'
+		  + '<input id="ans3-a" class="coeff ans3" type="text" autocomplete="off"></input><i>x</i><sup>2</sup> + '
+		  + '<input id="ans3-b" class="coeff ans3" type="text" autocomplete="off"></input><i>x</i> + '
+		  + '<input id="ans3-c" class="coeff ans3" type="text" autocomplete="off"></input><i>x</i> + '
+		  + '<input id="ans3-d" class="coeff ans3" type="text" autocomplete="off"></input>'
+		  + ' <span id="step3-grade"></span>'
+		  + '</li>'
+	  );
+
+	  $(".ans3").change(check_step3);
+	  $("#ans3-a").focus();
+      }
+
+      function show_step4() {
+	  var a = Number($("#ans3-a").val());
+	  var b1 = Number($("#ans3-b").val());
+	  var b2 = Number($("#ans3-c").val());
+	  var c = Number($("#ans3-d").val());
+
+	  $("#walkthrough").append(
+	      '<li id="step4" class="step">'
+		  + 'Factor by grouping:<br><p></p>'
+	          + '= <big>(' + htmlForPoly([0, b1, a]) + ')</big> + <big>(' + htmlForPoly([c, b2]) + ')</big><p>'
+		  + '= <input id="ans4-a" class="coeff ans4" type="text" autocomplete="off"></input>'
+		  + '<big>(</big><input id="ans4-b" class="biginput ans4" type="text" autocomplete="off"></input><big>)</big>'
+		  + ' + '
+		  + '<input id="ans4-c" class="coeff ans4" type="text" autocomplete="off"></input>'
+		  + '<big>(</big><input id="ans4-d" class="biginput ans4" type="text" autocomplete="off"></input><big>)</big>'
+		  + ' <span id="step4-grade"></span>'
+		  + '</li>'
+	  );
+	  
+	  $(".ans4").change(check_step4);
+	  $("#ans4-a").focus();
+      }
+
+      function show_step5() {
+	  $("#walkthrough").append(
+	      '<li id="step5" class="step">'
+		  + 'Continue factoring:<br><p></p>'
+		  + '= <big>(</big><input id="ans5-a" class="biginput ans5" type="text" autocomplete="off"></input><big>)</big>'
+		  + '<big>(</big><input id="ans5-b" class="biginput ans5" type="text" autocomplete="off"></input><big>)</big>'
+		  + ' <span id="step5-grade"></span>'
+		  + '</li>'
+	  );
+
+	  $(".ans5").change(check_step5);
+	  $("#ans5-a").focus();
+      }
+
+      function show_step6() {
+	  $("#ans5-a").blur();
+	  $("#ans5-b").blur();
+	  $("#walkthrough").append(
+	      '<li id="step6" class="step">'
+		  + "Congratulations, you're done!"
+		  + "<br>(Reload the page to try a new problem)"
+		  + '</li>'
+	  );
+      }
+
+    </script>
+  </head>
+  <body>
+
+    <div style="font-size: 45px;">
+      Factor: &nbsp;&nbsp;<span id="poly" ></span>
+    </div>
+
+    <p></p>
+      
+    <ol id="walkthrough">  
+    <li id="step1" class="step">
+      AC-product = <input id="ans1-a" class="input ans1" type="text" autocomplete="off"></input>
+      <span id="step1-grade"></span>
+    </li>
+    </ol>
+
+    <script type="text/javascript">
+      $(function() {
+	  show_random_quadratic();
+	  $(".ans1").change(check_step1);
+	  $("#ans1-a").focus();
+      });
+    </script>
+
+  </body>
+</html>

@@ -1,0 +1,581 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <style type="text/css">
+      html, body { height: 95%; }
+      #graphdiv {
+	  width: 400px;
+	  height: 400px;
+	  position: relative;
+	  margin: 0 auto;
+      }
+      .graph { 
+	  width: 100%;
+	  height: 100%;
+	  border: 0px solid gray;
+	  margin: 0px;
+	  position: absolute;
+	  left: 0;
+	  top: 0;
+      }
+      #graph1 { z-index: 0; }
+      #graph2 { z-index: 1; }
+      .formula {
+	  font: 40px serif;
+      }
+      .formula-div {
+	  text-align: left;
+	  margin-left: 50px;
+      }
+      input::-webkit-outer-spin-button,
+      input::-webkit-inner-spin-button {
+	  -webkit-appearance: none;
+	  margin: 0;
+      }
+      input{ 
+	  color: #0000cc; 
+	  border: 1px solid #ccc;
+	  -webkit-appearance: none;
+      }
+      input:focus{ 
+	  color: #0000cc; 
+	  border: 1px solid #5ebaed;
+	  box-shadow: 0 0 10px #5ebaed;
+	  outline: none;
+	  -webkit-appearance: none;
+      }
+      input[readonly] { 
+	  outline: none;
+	  border: 1px dashed #ccc;
+	  -webkit-appearance: none;
+      }
+      input[readonly]:focus { 
+	  outline: none;
+	  border: 1px dashed #ccc;
+	  box-shadow: none;
+	  -webkit-appearance: none;
+      }
+      .input { 
+	  font-size: 32px;
+	  width: 100px;
+	  text-align: center;
+      }
+      .medinput { 
+	  font-size: 32px;
+	  width: 200px;
+	  text-align: center;
+      }
+      .biginput { 
+	  font-size: 32px;
+	  width: 300px;
+	  text-align: center;
+      }
+      .step {
+	  font-size: 32px;
+      }
+      .check {
+	  display: inline-block;
+	  border-radius: 50%;
+	  width: 32px;
+	  height: 32px;
+	  background-color: #00cc00;
+	  color: #ffff00;
+	  text-align: center;
+	  font-size: 26px;
+      }
+      .cross {
+	  display: inline-block;
+	  border-radius: 50%;
+	  width: 32px;
+	  height: 32px;
+	  background-color: #cc0000;
+	  color: #ff9999;
+	  text-align: center;
+	  font-size: 26px;
+      }
+      #walkthrough li {
+	  margin: 25px;
+      }
+    </style>
+  
+
+    <script src="http://ajax.googleapis.com/ajax/libs/jquery/2.0.0/jquery.min.js"></script>
+    <script src="calc.js"></script>
+    <script src="math.js"></script>
+    <script src="poly.js"></script>
+    <script type="text/javascript">
+      "use strict";
+      // Copyright 2013 Phillip Nguyen.
+      // All rights reserved.
+
+      function init_canvas(name) {
+	  var canvas = $(name)[0];
+	  canvas.width = ""+$(name).width();
+	  canvas.height = ""+$(name).height();
+	  // Fix the coordinate system so that origin is in center of canvas
+	  // with y-axis pointing up and x-axis pointing right.
+	  var ctx = canvas.getContext("2d");
+	  
+	  var min_dimension = Math.min(canvas.width, canvas.height);
+	  canvas.scale = min_dimension / 25;
+	  
+	  //ctx.setTransform(scale, 0, 0, -scale, min_dimension / 2, min_dimension / 2);
+	  ctx.setTransform(canvas.scale, 0, 0, -canvas.scale, canvas.width/2, canvas.height/2);
+	  ctx.lineWidth=1/canvas.scale;
+      }
+
+      function draw_grid() {
+	  var canvas = $("#graph1")[0];
+	  var ctx = canvas.getContext("2d");
+	  var deg_to_rad = Math.PI/180.0;
+	  var max_radius = 10;
+
+	  ctx.beginPath();
+	  ctx.strokeStyle="#cccccc";
+	  // Grid lines
+	  for (var i = -10; i <= 10; i++) {
+	      ctx.moveTo(-10, i);
+	      ctx.lineTo(10, i);
+	      ctx.moveTo(i, -10);
+	      ctx.lineTo(i, 10);
+	  }
+	  ctx.stroke();
+
+	  // X and Y axes.
+	  ctx.beginPath();
+	  ctx.strokeStyle="black";
+	  ctx.moveTo(-max_radius-.5, 0);
+	  ctx.lineTo(max_radius+.5, 0);
+	  ctx.moveTo(0, -max_radius-.5);
+	  ctx.lineTo(0, max_radius+.5);
+	  ctx.stroke();
+
+	  ctx.save();
+	  // X and Y axis labels
+	  ctx.setTransform(1, 0, 0, 1, canvas.width/2, canvas.height/2);
+	  ctx.font = "bold italic 18px Times New Roman";
+	  ctx.textAlign = "center";
+	  ctx.textBaseline = "middle";
+	  ctx.fillText("x", 11.1*canvas.scale, -0.1*canvas.scale);
+	  ctx.fillText("y", 0, -11.3*canvas.scale);
+	  // tick mark labels
+	  ctx.font = "10px sans-serif";
+	  ctx.textBaseline = "middle";
+	  for (var i = -10; i <= 10; i++) {
+	      if (i === 0) continue;
+	      ctx.fillText(i.toString(), i*canvas.scale, 0.5*canvas.scale);
+	  }
+	  ctx.textAlign = "right";
+	  for (var i = -10; i <= 10; i++) {
+	      if (i === 0) continue;
+	      ctx.fillText(i.toString(), -0.2*canvas.scale, -i*canvas.scale);
+	  }
+	  ctx.restore();
+
+      }
+
+      function clear_graph() {
+	  var canvas = $("#graph2")[0];
+	  var ctx = canvas.getContext("2d");
+	  ctx.save();
+	  ctx.setTransform(1, 0, 0, 1, 0, 0);
+	  ctx.clearRect(0, 0, canvas.width, canvas.height);
+	  ctx.restore();
+      }
+
+      function randInt(min, max) {
+	  return Math.floor(Math.random() * (max - min + 1)) + min;
+      }
+
+      // Note that a, b, and c should all be rational numbers
+      // given in the form [p, q].  The returned quadratic object
+      // has both h and k as rational numbers as well.
+      function create_quadratic(a, b, c) {
+	  var q = {};
+	  q.a = a;
+	  q.b = b;
+	  q.c = c;
+	  q.eval = function(x) {
+	      var r = MATH.rat_add(MATH.rat_add(MATH.rat_scale(a, x*x), MATH.rat_scale(b, x)), c);
+	      return MATH.rat_real(r);
+	  }
+
+	  q.h = MATH.rat_div(MATH.rat_neg(b), MATH.rat_scale(a, 2));
+	  q.k = MATH.rat_sub(c, MATH.rat_mul(MATH.rat_mul(a, q.h), q.h));
+
+	  return q;
+      }
+
+      function solve_quadratic(a, b, c) {
+	  var discr = b*b - 4*a*c;
+	  if (discr < 0) return [];
+	  if (discr === 0) return [-b/(2*a)];
+	  var root = Math.sqrt(discr);
+	  var zeros = [(-b+root)/(2*a), (-b-root)/(2*a)];
+	  return zeros.sort(function(a,b) { return a-b; });
+      }
+
+      var the_parabola;
+
+      function random_quadratic() {
+	  var h = randInt(-8, 8);
+	  var k = randInt(-8, 8);
+	  var x, y;
+	  do {
+	      x = randInt(-9, 9);
+	      y = randInt(-9, 9);
+	  } while (x === h || y === k || Math.abs(x-h) > 10);
+	  var a = MATH.rat_simplify([y - k,  Math.pow(x - h, 2)]);
+	  var b = MATH.rat_scale(a, -2*h);
+	  var c = MATH.rat_add(MATH.rat_scale(a, h*h), [k, 1]);
+	  
+	  return create_quadratic(a, b, c);
+      }
+
+      function graph_function() {
+	  var canvas = $("#graph2")[0];
+	  var ctx = canvas.getContext("2d");
+	  var incr = canvas.width / 2000;
+	  var x, y;
+	  
+	  ctx.strokeStyle="red";
+	  ctx.lineWidth=2/canvas.scale;
+
+	  var q = the_parabola;
+	  var a = MATH.rat_real(q.a)
+	  var b = MATH.rat_real(q.b)
+	  var c = MATH.rat_real(q.c)
+
+	  // Determine bounds of graph.
+	  var bounds;
+	  if (a > 0) {
+	      bounds = solve_quadratic(a, b, c - 11);
+	  } else {
+	      bounds = solve_quadratic(a, b, c + 11);
+	  }
+	  if (bounds.length < 2) return;
+	  var x1 = bounds[0];
+	  var x2 = bounds[1];
+	  if (x1 > 11) return;
+	  if (x2 < -11) return;
+	  if (x1 < -11) x1 = -11;
+	  if (x2 > 11) x2 = 11;
+
+	  // Stroke the function.
+	  ctx.beginPath();
+	  for (x = x1; x <= x2; x += incr) {
+	      y = q.eval(x);
+	      ctx.lineTo(x, y);
+	  }
+	  y = q.eval(x2);
+	  ctx.lineTo(x2, y);
+	  ctx.stroke();
+
+	  // Mark points at integer coordinates.
+	  ctx.fillStyle="red";
+	  for (x = -10; x <= 10; x += 1) {
+	      y = q.eval(x);
+	      if (Math.abs(y % 1) < 1e-10 && -10 <= y && y <= 10) {
+		  ctx.beginPath();
+		  ctx.arc(x, y, 0.2, 0, 2*Math.PI);
+		  ctx.fill();
+	      }
+	  }
+      }
+
+      function signCharacter(x) {
+	  if (x < 0) {
+	      return '&#8722;';
+	  } else {
+	      return '+';
+	  }
+      }
+
+      function mark_correct(step) {
+	  $("#step"+step+"-grade").html('<div class="check">&#x2713;</div>');
+	  $(".ans"+step).prop('readonly', true);
+	  $(".ans"+step).css("background-color", "white");
+	  $(".ans"+step).unbind("change");
+      }
+
+      function mark_wrong(step) {
+	  $("#step"+step+"-grade").html('<div class="cross">&#x2718;</div>');
+	  $(".ans"+step).css("background-color", "pink");
+      }
+
+      function check_step1() {
+	  var ans1a = $("#ans1-a").val();
+	  var ans1b = $("#ans1-b").val();
+
+	  if (ans1a == '' || ans1b == '') {
+	      $(".ans1").css("background-color", "white");
+	      return;
+	  }
+
+	  ans1a = Number(ans1a);
+	  ans1b = Number(ans1b);
+	  var h = MATH.rat_real(the_parabola.h);
+	  var k = MATH.rat_real(the_parabola.k);
+	  if (ans1a === h && ans1b === k) {
+	      mark_correct(1);
+	      show_step2();
+	  } else {
+	      mark_wrong(1);
+	  }
+      }
+
+      function check_step2() {
+	  var ans2a = $("#ans2-a").val();
+	  var ans2b = $("#ans2-b").val();
+
+	  if (ans2a == '' || ans2b == '') {
+	      $(".ans2").css("background-color", "white");
+	      return;
+	  }
+
+	  ans2a = Number(ans2a);
+	  ans2b = Number(ans2b);
+	  var h = MATH.rat_real(the_parabola.h);
+	  var k = MATH.rat_real(the_parabola.k);
+	  if (ans2a === h && ans2b === k) {
+	      mark_correct(2);
+	      show_step3();
+	  } else {
+	      mark_wrong(2);
+	  }
+      }
+
+      function check_step3() {
+	  var ans3a = $("#ans3-a").val();
+	  var ans3b = $("#ans3-b").val();
+
+	  if (ans3a == '' || ans3b == '') {
+	      $(".ans3").css("background-color", "white");
+	      return;
+	  }
+
+	  ans3a = Number(ans3a);
+	  ans3b = Number(ans3b);
+	  if (the_parabola.eval(ans3a) === ans3b) {
+	      mark_correct(3);
+	      show_step4();
+	  } else {
+	      mark_wrong(3);
+	  }
+      }
+
+      function check_step4() {
+	  var ans4a = $("#ans4-a").val();
+	  var ans4b = $("#ans4-b").val();
+
+	  if (ans4a == '' || ans4b == '') {
+	      $(".ans4").css("background-color", "white");
+	      return;
+	  }
+
+	  ans4a = Number(ans4a);
+	  ans4b = Number(ans4b);
+
+	  var x = Number($("#ans3-a").val());
+	  var y = Number($("#ans3-b").val());
+
+	  if (ans4a === y && ans4b === x) {
+	      mark_correct(4);
+	      show_step5();
+	  } else {
+	      mark_wrong(4);
+	  }
+      }
+
+      function check_step5() {
+	  var ans5a = $("#ans5-a").val();
+
+	  if (ans5a == '') {
+	      $(".ans5").css("background-color", "white");
+	      return;
+	  }
+
+	  var a = the_parabola.a;
+	  if (a[1] === 1) {
+	      // The leading coefficient is an integer, so we can
+	      // do a simple check against the number input.
+	      if (a[0] === Number(ans5a)) {
+		  mark_correct(5);
+		  show_step6();
+	      } else {
+		  mark_wrong(5);
+	      }
+	  } else {
+	      // The leading coefficient is a fraction, so we must
+	      // correctly parse the input into a numerator and denominator.
+	      var frac = ans5a.split("/")
+	      if (frac.length === 2 && a[0] === Number(frac[0]) && a[1] === Number(frac[1])) {
+		  mark_correct(5);
+		  show_step6();
+	      } else {
+		  mark_wrong(5);
+	      }
+	  }
+      }
+
+      function check_step6() {
+	  var ans6a = $("#ans6-a").val();
+
+	  if (ans6a == '') {
+	      $(".ans6").css("background-color", "white");
+	      return;
+	  }
+
+	  var a = the_parabola.a;
+	  var h = MATH.rat_real(the_parabola.h);
+	  var k = MATH.rat_real(the_parabola.k);
+	  
+	  if (POLY.is_simplified_vertex_form(ans6a, a, h, k)) {
+	      mark_correct(6);
+	      show_step7();
+	  } else {
+	      mark_wrong(6);
+	  }
+      }
+
+      function show_step2() {
+	  $("#walkthrough").append(
+	      '<li id="step2" class="step">'
+		  + 'Write out a partial formula for the parabola in vertex form:<br>'
+		  + '<div class="formula-div">'
+		  + '<span class="formula">'
+		  + '<i>f(x)</i> = <i>a</i><big>(</big><i>x</i> &#8722; <input id="ans2-a" class="input ans2" type="text" autocomplete="off"></input><big>)</big><sup>2</sup>'
+		  + ' + <input id="ans2-b" class="input ans2" type="text" autocomplete="off"></input>'
+		  + '</span>'
+		  + ' <span id="step2-grade"></span>'
+		  + '</div>'
+		  + '</li>'
+	  );
+
+	  $(".ans2").change(check_step2);
+	  $("#ans2-a").focus();
+      }
+
+      function show_step3() {
+	  $("#walkthrough").append(
+	      '<li id="step3" class="step">'
+		  + 'Another nice point on the parabola is '
+		  + '<big>(</big><input id="ans3-a" class="input ans3" type="text" autocomplete="off"></input>, '
+		  + '<input id="ans3-b" class="input ans3" type="text" autocomplete="off"></input>'
+		  + '<big>)</big>'
+		  + ' <span id="step3-grade"></span>'
+		  + '</li>'
+	  );
+
+	  $(".ans3").change(check_step3);
+	  $("#ans3-a").focus();
+      }
+
+      function show_step4() {
+	  var h = Number($("#ans1-a").val());
+	  var k = Number($("#ans1-b").val());
+
+	  $("#walkthrough").append(
+	      '<li id="step4" class="step">'
+		  + 'Plug this other point into your partial formula:<br>'
+		  + '<div class="formula-div">'
+		  + '<span class="formula">'
+		  + '<input id="ans4-a" class="input ans4" type="text" autocomplete="off"></input> '
+		  + '= <i>a</i><big>(</big><input id="ans4-b" class="input ans4" type="text" autocomplete="off"></input> '
+		  + (h === 0 ? '' : signCharacter(-h) + ' ' + Math.abs(h))
+		  + '<big>)</big><sup>2</sup> '
+		  + (k === 0 ? '' : signCharacter(k) + ' ' + Math.abs(k))
+		  + '</span>'
+		  + ' <span id="step4-grade"></span>'
+		  + '</div>'
+		  + '</li>'
+	  );
+	  
+	  $(".ans4").change(check_step4);
+	  $("#ans4-a").focus();
+      }
+
+      function show_step5() {
+	  $("#walkthrough").append(
+	      '<li id="step5" class="step">'
+		  + 'Solve the above equation for the <u>exact</u> simplified value of <i>a</i>:<br>'
+		  + '<div class="formula-div">'
+		  + '<span class="formula">'
+		  + '<i>a</i> = '
+		  + '<input id="ans5-a" class="medinput ans5" type="text" autocomplete="off"></input>'
+		  + '</span>'
+		  + ' <span id="step5-grade"></span>'
+		  + '</div>'
+		  + '</li>'
+	  );
+
+	  $(".ans5").change(check_step5);
+	  $("#ans5-a").focus();	  
+      }
+
+      function show_step6() {
+	  $("#walkthrough").append(
+	      '<li id="step6" class="step">'
+		  + 'Write out the complete formula of the parabola in vertex form:<br>'
+		  + '(use the ^ symbol for exponents and simplify signs)<br>'
+		  + '<div class="formula-div">'
+		  + '<span class="formula"><i>f(x)</i> = '
+		  + '<input id="ans6-a" class="biginput ans6" type="text" autocomplete="off"></input>'
+		  + '</span>'
+		  + ' <span id="step6-grade"></span>'
+		  + '</div>'
+		  + '</li>'
+	  );
+
+	  $(".ans6").change(check_step6);
+	  $("#ans6-a").focus();	  
+      }
+
+      function show_step7() {
+	  $("#ans6-a").blur();
+	  $("#walkthrough").append(
+	      '<li id="step7" class="step">'
+		  + "Congratulations, you're done!"
+		  + "<br>(Reload the page to try a new problem)"
+		  + '</li>'
+	  );
+      }
+
+
+    </script>
+  </head>
+  
+  <body>
+    <div id="graphdiv">
+      <canvas class="graph" id="graph1"></canvas>
+      <canvas class="graph" id="graph2"></canvas>
+    </div>
+
+    <ol id="walkthrough">  
+    <li id="step1" class="step">
+      The vertex of the parabola is at
+      <big>(</big><input id="ans1-a" class="input ans1" type="text" autocomplete="off" formnovalidate></input>,
+      <input id="ans1-b" class="input ans1" type="text" autocomplete="off"></input>
+      <big>)</big>
+      <span id="step1-grade"></span>
+    </li>
+    </ol>
+
+
+    <script type="text/javascript">
+      $(function() {
+	  init_canvas("#graph1");
+	  init_canvas("#graph2");
+	  draw_grid();
+	  the_parabola = random_quadratic();
+	  graph_function();
+
+	  $(".ans1").change(check_step1);
+	  $("#ans1-a").focus();
+      });
+    </script>
+
+  </body>
+
+
+</html>
