@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Law of Large Numbers with Dice</title>
+  <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.10.1/jquery.min.js"></script>
+  <style>
+    body {
+      font-weight: bold;
+      font-family: Verdana, Geneva, sans-serif;
+      width: 800px;
+      margin: auto;
+    }
+    #buttons-div {
+      text-align: center;
+      margin-top: 10px;
+    }
+    #reset {
+      margin-left: 40px;
+    }
+    #numrolls-div {
+      font-size: 48;
+      font-weight: bold;
+      text-align: center;
+      margin: 20 0 20 0;
+    }
+    .dot {
+      border-radius: 50%;
+      width: 20%;
+      height: 20%;
+      background-color: #eee;
+    }
+    .center { left: 40%; top: 40%; position: absolute; }
+    .left { left: 15%; position: absolute; }
+    .top { top: 15%; position: absolute; }
+    .bottom { bottom: 15%; position: absolute; }
+    .right { right: 15%; position: absolute; }
+    .middle { top: 40%; position: absolute; }
+    .die {
+      margin: 5px 10px 15px 10px;
+      width: 60px;
+      height: 60px;
+      border-radius: 10%;
+      position: relative;
+      box-shadow: 0 8px 0 1px #800, 0 0 0 1px #800, 0 10px 10px 2px #222, 0 2px 5px 0 #222;
+      background: -webkit-linear-gradient(-45deg, #f99, #a33);
+      background: -moz-linear-gradient(-45deg, #f99, #a33);
+      background: -o-linear-gradient(-45deg, #f99, #a33);
+      background: -ms-linear-gradient(-45deg, #f99, #a33);
+      background: linear-gradient(135deg, #f99, #a33);
+    }
+    table { 
+      margin-right: auto;
+      margin-left: auto;
+      border-collapse: collapse;
+    }
+    td { 
+      padding: 10px 10px 20px 10px;
+      border-top: 1px solid black;
+    }
+    th { padding-bottom: 5px; }
+    .bignum { 
+      font-weight: bold;
+      font-family: Verdana, Geneva, sans-serif; 
+      font-size: 36; 
+      width: 5em;
+      text-align: center;
+    }
+  </style>
+  <script type="text/javascript">
+    "use strict";
+
+    var numRolls = 0;
+    var rollStats = [0, 0, 0, 0, 0, 0];
+
+    $(function() {
+	$("#roll10").click(function() { rollDice(10, 100, 1); });
+	$("#roll100").click(function() { rollDice(100, 10, 1); });
+	$("#roll1000").click(function() { rollDice(1000, 0, 7); });
+	$("#roll10000").click(function() { rollDice(10000, 0, 31); });
+	$("#reset").click(resetCounters);
+    });
+
+    function rollDice(n, delay, incr) {
+	var interval;
+	interval = setInterval(function() {
+	    doRoll(Math.min(incr, n));
+	    n -= incr;
+	    if (n <= 0) { clearInterval(interval); }
+	}, delay);
+    }
+
+    function doRoll(incr) {
+	for (var i = 0; i < incr; i++) {
+	    numRolls += 1;
+	    var face = Math.floor(Math.random()*6 + 1);
+	    rollStats[face - 1] += 1;
+	}
+	$(".numrolls").text(numRolls);
+	for (var i = 0; i < 6; i++) {
+	    $(".num"+(i+1).toString(10)).text(rollStats[i]);
+	    $(".freq"+(i+1).toString(10)).text( (rollStats[i]/numRolls).toFixed(5) );
+	}
+    }
+
+
+    function resetCounters() {
+	numRolls = 0;
+	rollStats = [0, 0, 0, 0, 0, 0];
+	$(".numrolls").text(numRolls);
+	for (var i = 0; i < 6; i++) {
+	    $(".num"+(i+1).toString(10)).text(rollStats[i]);
+	    $(".freq"+(i+1).toString(10)).text("0");
+	}
+    }
+
+  </script>
+</head>
+<body>
+
+<div id="buttons-div">
+<button id="roll10">Roll dice 10 times</button>
+
+<button id="roll100">Roll dice 100 times</button>
+
+<button id="roll1000">Roll dice 1,000 times</button>
+
+<button id="roll10000">Roll dice 10,000 times</button>
+
+<button id="reset">Reset</button>
+</div>
+
+
+<div id="numrolls-div"><span class="numrolls">0</span> rolls</div>
+
+
+<table>
+
+<tr><th>Face</th><th>Count</th><th>Frequency</th></tr>
+
+<tr>
+<td>
+<div class="die">
+<div class="dot center"></div>
+</div>
+</td>
+<td class="bignum"><span class="num1">0</span></td>
+<td class="bignum"><span class="freq1">0</span></td>
+</tr>
+
+<tr><td>
+<div class="die">
+<div class="dot top right"></div>
+<div class="dot bottom left"></div>
+</div>
+</td>
+<td class="bignum"><span class="num2">0</span></td>
+<td class="bignum"><span class="freq2">0</span></td>
+</tr>
+
+<tr><td>
+<div class="die">
+<div class="dot top left"></div>
+<div class="dot center"></div>
+<div class="dot bottom right"></div>
+</div>
+</td>
+<td class="bignum"><span class="num3">0</span></td>
+<td class="bignum"><span class="freq3">0</span></td>
+</tr>
+
+<tr><td>
+<div class="die">
+<div class="dot top left"></div>
+<div class="dot top right"></div>
+<div class="dot bottom left"></div>
+<div class="dot bottom right"></div>
+</div>
+</td>
+<td class="bignum"><span class="num4">0</span></td>
+<td class="bignum"><span class="freq4">0</span></td>
+</tr>
+
+<tr><td>
+<div class="die">
+<div class="dot top left"></div>
+<div class="dot top right"></div>
+<div class="dot center"></div>
+<div class="dot bottom left"></div>
+<div class="dot bottom right"></div>
+</div>
+</td>
+<td class="bignum"><span class="num5">0</span></td>
+<td class="bignum"><span class="freq5">0</span></td>
+</tr>
+
+<tr><td>
+<div class="die">
+<div class="dot top left"></div>
+<div class="dot top right"></div>
+<div class="dot middle left"></div>
+<div class="dot middle right"></div>
+<div class="dot bottom left"></div>
+<div class="dot bottom right"></div>
+</div>
+</td>
+<td class="bignum"><span class="num6">0</span></td>
+<td class="bignum"><span class="freq6">0</span></td>
+</tr>
+
+</table>
+
+</body>
+</html>

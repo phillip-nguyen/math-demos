@@ -1,0 +1,368 @@
+<html>
+<head>
+  <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.10.1/jquery.min.js"></script>
+  <script src="http://ajax.googleapis.com/ajax/libs/jqueryui/1.10.3/jquery-ui.min.js"></script>
+  <style>
+    .clear {
+      clear: both;
+    }
+    .undecorated-list {
+      list-style-type: none;
+      margin: 0;
+      padding: 0;
+    }
+    .sortable {
+      list-style-type: none;
+      margin: 0;
+      padding: 0;
+    }
+    .box {
+      position: static;
+      width: 100px;
+      height: 100px;
+      line-height: 100px;
+      text-align: center;
+      font-size: 64px;
+      margin: 10px 20px;
+    }
+    .ordinal-box {
+      position: static;
+      width: 100px;
+      height: 100px;
+      line-height: 100px;
+      text-align: center;
+      font-size: 32px;
+      color: gray;
+      margin: 10px 0px;
+    }
+    .A { background: #f6989d; }
+    .B { background: #6ecff6; }
+    .C { background: #c4df9b; }
+    .D { background: #fff79a; }
+    .column {
+      float: left;
+      margin: 0px;
+      padding: 0px;
+    }
+    .column-count {
+      width: 100px;
+      height: 1.5em;
+      font-size: 48px;
+      text-align: center;
+      margin: 10px 20px 0px 20px;
+    }
+    .horizontal-rule {
+      width: 100%;
+      height: 5px;
+      background: black;
+    }
+    #pref-schedule {
+      display: inline-block;
+      overflow: auto;
+    }
+    .result-list {
+      list-style-type: none;
+      margin: 0;
+      padding: 0;
+    }
+    .result-div {
+      float: left;
+      margin: 10px;
+    }
+    #plurality-results {
+      display: inline-block;
+    }
+    #single-runoff-results {
+      display: inline-block;
+    }
+    #borda-count-results {
+      display: inline-block;
+    }
+  </style>
+  <script type="text/javascript">
+    "use strict";
+    
+    $(function() {
+	$(".sortable").sortable({placeholder: "box"});
+	$(".sortable").disableSelection();
+	$("#button").click(function() { 
+	    var ps = readPrefSchedule();
+	    plurality(ps);
+	    singleRunoff(ps);
+	    bordaCount(ps);
+	});
+    });
+
+    // Returns the information in column n as an array in the form ["ABCD", 5]
+    function readColumn(n) {
+	var ranking = $("#column"+n).sortable("toArray");
+	for (var i = 0, len = ranking.length; i < len; i++) {
+	    ranking[i] = ranking[i][0];
+	}
+	var count = Number($("#count"+n).val());
+	return [ranking.join(''), count];
+    }
+
+    // Returns obj[key] if defined, otherwise returns val.
+    function getdefault(obj, key, val) {
+	if (obj[key] === undefined) {
+	    return val;
+	} else {
+	    return obj[key];
+	}
+    }
+
+    // Returns the preference schedule as an object in the form
+    // {"ABCD": 5, "DABC": 7, "BCDA": 1}
+    function readPrefSchedule() {
+	var numColumns = 5;
+	var prefSchedule = {}
+	for (var i = 1; i <= numColumns; i++) {
+	    var keyval = readColumn(i);
+	    prefSchedule[keyval[0]] = getdefault(prefSchedule, keyval[0], 0) + keyval[1];
+	}
+	return prefSchedule;
+    }
+
+    function istype(obj, type) {
+	var clas = Object.prototype.toString.call(obj).slice(8,-1);
+	return obj !== undefined && obj !== null && clas == type;
+    }
+    
+    function foreach(obj, f) {
+	if (istype(obj, "Object")) {
+	    for (var key in obj) {
+		if (obj.hasOwnProperty(key)) {
+		    f(key);
+		}
+	    }
+	} else if (istype(obj, "String") || istype(obj, "Array")) {
+	    for (var i = 0, len = obj.length; i < len; i++) {
+		f(obj[i]);
+	    }
+	}
+    }
+
+    function objectkeys(obj) {
+	var keys = [];
+	for (var k in obj) {
+	    if (obj.hasOwnProperty(k)) {
+		keys.push(k);
+	    }
+	}
+	return keys;
+    }
+
+    function candidates(ps) {
+	var d = {};
+	foreach(ps, function(r) {
+	    foreach(r, function(c) {
+		d[c] = 1;
+	    });
+	});
+	return objectkeys(d)
+    }
+	
+    function firstPlaceVotes(ps, candidates) {
+	var tally = {}
+	// Make sure that every candidate shows up in the final tally
+	// even if they received zero votes.
+	foreach(candidates, function(x) { tally[x] = 0; });
+	foreach(ps, function(ranking) {
+	    var votes = ps[ranking];
+	    for (var i = 0, len = ranking.length; i < len; i++) {
+		var x = ranking[i];
+		if ($.inArray(x, candidates) !== -1) {
+		    tally[x] = getdefault(tally, x, 0) + votes;
+		    break;
+		}
+	    }
+	});
+	return tally;
+    }
+
+    function winnerByVotes(tally) {
+	var maxVotes = undefined;
+	var winners = [];
+	foreach(tally, function(c) {
+	    if (maxVotes === undefined || tally[c] > maxVotes) {
+		maxVotes = tally[c];
+		winners = [ c ];
+	    } else if (tally[c] === maxVotes) {
+		winners.push(c);
+	    }
+	});
+    
+	if (winners.length == 1) {
+	    return winners[0];
+	}
+	return winners;
+    }
+
+    function htmlForTally(tally, title) {
+	// Get sorted list of candidates.
+	var clist = objectkeys(tally);
+	clist.sort();
+	var s = '';
+	s += '<div class="result-div">';
+	s += title; //'<p>' + title + '</p>';
+	s += '<ul class="result-list">';
+	foreach(clist, function(x) {
+	    s += '<li>' + x + ': ' + (tally[x] || 0)  + '</li>'
+	});
+	s += '</ul>';
+	s += '</div>';
+	return s;
+    }
+
+    function plurality(ps) {
+	var tally = firstPlaceVotes(ps, candidates(ps));
+	var winner = winnerByVotes(tally);
+	$("#plurality-winner").text(winner);
+	$("#plurality-results").html(htmlForTally(tally, "First-place Votes"));
+    }
+
+    function singleRunoff(ps) {
+	var clist = candidates(ps);
+	var round1 = firstPlaceVotes(ps, clist);
+	var round1html = htmlForTally(round1, "Round 1");
+	var runoff = [];
+	var winner = winnerByVotes(round1);
+	if (istype(winner, "Array")) {
+	    // There was a tie during the first round, so 
+	    // the second round will be between all tied-candidates.
+	    runoff = winner;
+	} else {
+	    // Find the top-two candidates.  The candidate with most votes
+	    // will participate in the runoff.  Then we remove that candidate
+	    // from the tally and find the second-place winner(s), adding them to
+	    // the runoff too.
+	    runoff.push(winner);
+	    delete round1[winner];
+	    winner = winnerByVotes(round1);
+	    if (istype(winner, "Array")) {
+		runoff = runoff.concat(winner);
+	    } else {
+		runoff.push(winner);
+	    }
+	}
+	var round2 = firstPlaceVotes(ps, runoff);
+	winner = winnerByVotes(round2);
+	
+	$("#single-runoff-winner").text(winner);
+	$("#single-runoff-results").html(function() {
+	    return round1html + htmlForTally(round2, "Round 2");
+	});
+    }
+
+    function bordaCount(ps) {
+	var numCandidates = candidates(ps).length;
+	var points = {}
+	foreach(ps, function(ranking) {
+	    for (var i = 0, len = ranking.length; i < len; i++) {
+		var c = ranking[i];
+		points[c] = getdefault(points, c, 0) + ps[ranking]*(numCandidates-i);
+	    }
+	});
+	var winner = winnerByVotes(points);
+	$("#borda-count-winner").text(winner);
+	$("#borda-count-results").html(function() {
+	    return htmlForTally(points, "Point Totals");
+	});	
+    }
+
+  </script>
+</head>
+<body>
+
+  <div id="pref-schedule">
+
+  <div class="column">
+  <ul class="undecorated-list">
+    <li class="ordinal-box">1st</li>
+    <li class="ordinal-box">2nd</li>
+    <li class="ordinal-box">3rd</li>
+    <li class="ordinal-box">4th</li>
+  </ul>
+  <div class="horizontal-rule"></div>
+  </div>
+
+  <div class="column">
+  <ul class="sortable" id="column1">
+    <li id="A1" class="A box">A</li>
+    <li id="B1" class="B box">B</li>
+    <li id="C1" class="C box">C</li>
+    <li id="D1" class="D box">D</li>
+  </ul>
+  <div class="horizontal-rule"></div>
+  <input type="number" class="column-count" id="count1" value="1"></input>
+  </div>
+
+  <div class="column">
+  <ul class="sortable" id="column2">
+    <li id="A2" class="A box">A</li>
+    <li id="B2" class="B box">B</li>
+    <li id="C2" class="C box">C</li>
+    <li id="D2" class="D box">D</li>
+  </ul>
+  <div class="horizontal-rule"></div>
+  <input type="number" class="column-count" id="count2" value="1"></input>
+  </div>
+
+  <div class="column">
+  <ul class="sortable" id="column3">
+    <li id="A3" class="A box">A</li>
+    <li id="B3" class="B box">B</li>
+    <li id="C3" class="C box">C</li>
+    <li id="D3" class="D box">D</li>
+  </ul>
+  <div class="horizontal-rule"></div>
+  <input type="number" class="column-count" id="count3" value="1"></input>
+  </div>
+
+  <div class="column">
+  <ul class="sortable" id="column4">
+    <li id="A4" class="A box">A</li>
+    <li id="B4" class="B box">B</li>
+    <li id="C4" class="C box">C</li>
+    <li id="D4" class="D box">D</li>
+  </ul>
+  <div class="horizontal-rule"></div>
+  <input type="number" class="column-count" id="count4" value="1"></input>
+  </div>
+
+  <div class="column">
+  <ul class="sortable" id="column5">
+    <li id="A5" class="A box">A</li>
+    <li id="B5" class="B box">B</li>
+    <li id="C5" class="C box">C</li>
+    <li id="D5" class="D box">D</li>
+  </ul>
+  <div class="horizontal-rule"></div>
+  <input type="number" class="column-count" id="count5" value="1"></input>
+  </div>
+  </div>
+
+  <div class="clear">
+
+  <button id="button">Vote!</button>
+
+  <div class="clear">
+
+  <div id="plurality-results"></div><br>
+  Plurality winner: <span id="plurality-winner"></span>
+
+  <hr>
+
+  <div class="clear">
+
+  <div id="single-runoff-results"></div><br>
+  Single-runoff winner: <span id="single-runoff-winner"></span>
+
+  <hr>
+
+  <div id="borda-count-results"></div><br>
+  Borda Count winner: <span id="borda-count-winner"></span>
+
+</body>
+</html>

@@ -1,0 +1,757 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Graph Theory</title>
+    <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.10.1/jquery.min.js"></script>
+    <script src="http://cdnjs.cloudflare.com/ajax/libs/underscore.js/1.5.2/underscore-min.js"></script>
+    <style>
+      html, body { height: 95%; }
+      #canvas_div {
+	  width: 800px;
+	  height: 800px;
+	  position: relative;
+	  margin: 0 auto;
+      }
+      .canvas { 
+	  width: 800px;
+	  height: 800px;
+	  border: 1px solid gray;
+	  margin: 0px;
+	  position: absolute;
+	  left: 0;
+	  top: 0;
+      }
+    </style>
+    <script type="text/javascript">
+      "use strict";
+
+      var vertices = [];
+      var selected_vertex = false;
+      var hover_vertex = false;
+      var long_click = {};
+      var held_vertex = false;
+      var nascent_edge = false;
+      var near_points = [];
+
+      var edges = [];
+      var selected_edge = false;
+      var held_edge = false;
+
+      // Returns a signed cube root of x.  Necessary since the
+      // javascript pow function cannot handle negative arguments.
+      function cube_root(x) {
+	  if (x >= 0) {
+	      return Math.pow(x, 1/3);
+	  } else {
+	      return -Math.pow(-x, 1/3);
+	  }
+      }
+
+      // Returns the distinct real roots of ax^2 + bx + c.
+      function solve_quadratic(a, b, c) {
+	  if (a === 0) return [ -c/b ]; // was actually linear
+	  var discr = b*b - 4*a*c;
+	  if (discr < 0) return []; // no real solutions
+	  if (discr === 0) return [-b/(2*a)]; // one real root
+	  var root = Math.sqrt(discr);
+	  return [(-b+root)/(2*a), (-b-root)/(2*a)]; // two real roots
+      }
+
+      function solve_cubic(a, b, c, d) {
+	  // Take care of easily solved special cases.
+	  if (a === 0) {
+	      return solve_quadratic(b, c, d);
+	  } else if (b === 0 && c === 0) {
+	      return [ cube_root(-d/a) ];
+	  } else if (c === 0 && d === 0) {
+	      return [ 0, -b/a ];
+	  } else if (d === 0) {
+	      return [0].concat(solve_quadratic(a, b, c));
+	  }
+	  // Find a safe value for the initial guess.
+	  // All solutions must lie between -r and r.
+	  var r = 1 + Math.max(Math.abs(a), Math.abs(b), Math.abs(c));
+	  // Find the inflection point.
+	  var xinfl = -b/3;
+	  // Determine if cubic is headed up or down at inflection.
+	  var df = a*xinfl*xinfl*xinfl + b*xinfl*xinfl + c*xinfl + d;
+	  var x0 = (df <= 0) ? r : -r;
+
+	  // Use Halley's method to find the first root, starting with a guess of x0.
+	  var z1 = halley_cubic(x0, a, b, c, d);
+	  // Then divide (x-z1) out of the cubic to get a quadratic poly.
+	  var a2 = a;
+	  var b2 = b + z1*a;
+	  var c2 = c + z1*b + z1*z1*a;
+	  // Return the first zero along with roots of quadratic.
+	  return [z1].concat(solve_quadratic(a2, b2, c2));
+      }
+
+      // Use the Newton-Raphson method to solve a cubic equation
+      // using initial guess of x.  The solver will look for a solution
+      // until either the difference between successive iterations is less
+      // than 1e-12 or until we exceed the maximum allowed iterations.
+      function newton_cubic(x, a, b, c, d, maxIter) {
+	  if (maxIter === undefined) maxIter = 100;
+	  for (var i = 0; i < maxIter; i++) {
+	      var diff = (a*x*x*x + b*x*x + c*x + d) / (3*a*x*x + 2*b*x + c);
+	      x = x - diff;
+	      if (Math.abs(diff) < 1e-12) {
+		  //console.log('iter = ' + i);
+		  return x;
+	      }
+	  }
+	  return x;
+      }
+
+      // Use Halley's method to solve a cubic equation
+      // using initial guess of x.  The solver will look for a solution
+      // until either the difference between successive iterations is less
+      // than 1e-12 or until we exceed the maximum allowed iterations.
+      function halley_cubic(x, a, b, c, d, maxIter) {
+	  if (maxIter === undefined) maxIter = 100;
+	  for (var i = 0; i < maxIter; i++) {
+	      var f = a*x*x*x + b*x*x + c*x + d;
+	      var df = 3*a*x*x + 2*b*x + c;
+	      var ddf = 6*a*x + 2*b
+	      var diff = 2*f*df / (2*df*df - f*ddf);
+	      x = x - diff;
+	      if (Math.abs(diff) < 1e-12) {
+		  //console.log('iter = ' + i);
+		  return x;
+	      }
+	  }
+	  return x;
+      }
+      
+      // Points p0, p1, p2, and q are assumed to be vertices of the form {'x': x, 'y': y}.
+      // Returns the point on the quadratic bezier curve defined by the
+      // control points p0, p1, p2 which is closest to the point q.  The closest point is 
+      // returned as an object having x, y, and t properties, where t is the 
+      // bezier parameter defining the point.
+      function quadratic_bezier_near_point(p0, p1, p2, q) {
+	  var ax = p1.x - p0.x
+	  var ay = p1.y - p0.y;
+	  var bx = p2.x - 2*p1.x + p0.x;
+	  var by = p2.y - 2*p1.y + p0.y;
+	  var cx = p0.x - q.x;
+	  var cy = p0.y - q.y;
+	  
+	  var a0 = ax*cx + ay*cy;
+	  var a1 = 2*(ax*ax + ay*ay) + (bx*cx + by*cy);
+	  var a2 = 3*(ax*bx + ay*by);
+	  var a3 = bx*bx + by*by;
+
+	  var roots = solve_cubic(a3, a2, a1, a0);
+	  roots.concat([0,1]); // include the endpoints
+	  var candidates = [];
+
+	  _.each(roots, function(t) {
+	      if (t >= 0 && t <= 1) {
+		  var b0 = (1-t)*(1-t);
+		  var b1 = 2*(1-t)*t;
+		  var b2 = t*t;
+		  
+		  var x = b0*p0.x + b1*p1.x + b2*p2.x;
+		  var y = b0*p0.y + b1*p1.y + b2*p2.y;
+		  candidates.push({x:x, y:y, t:t});
+	      }
+	  });
+		 
+	  
+	  return _.min(candidates, function(p) {
+	      // Calculate square of distance from p to point q.
+	      return (p.x - q.x)*(p.x - q.x) + (p.y - q.y)*(p.y - q.y);
+	  });
+      }
+
+      function init_canvas(name) {
+	  var canvas = $(name)[0];
+	  canvas.width = ""+$(name).width();
+	  canvas.height = ""+$(name).height();
+	  // Fix the coordinate system so that origin is in center of canvas
+	  // with y-axis pointing up and x-axis pointing right.
+	  var ctx = canvas.getContext("2d");
+	  
+	  //var min_dimension = Math.min(canvas.width, canvas.height);
+	  //canvas.scale = min_dimension / 25;
+	  
+	  //ctx.setTransform(scale, 0, 0, -scale, min_dimension / 2, min_dimension / 2);
+	  //ctx.setTransform(canvas.scale, 0, 0, -canvas.scale, canvas.width/2, canvas.height/2);
+	  //ctx.lineWidth=1/canvas.scale;
+	  
+	  //ctx.translate(0.5, 0.5);
+
+	  $(name).mousedown(click_on_canvas);
+	  $(name).mousemove(mouse_moved);
+	  $(name).mouseup(mouse_up);
+	  $(name).dblclick(double_click_on_canvas);
+      }
+
+      function double_click_on_canvas(event) {
+	  var x = event.pageX-$("#myCanvas").offset().left;
+	  var y = event.pageY-$("#myCanvas").offset().top;
+
+	  var v = find_vertex(x, y);
+	  if (v) {
+	      var name = window.prompt("Enter the vertex name:", v.name);
+	      // Note: bug in Safari >= 5.1.  It returns '' on cancel.
+	      // Not really anything we can do about it, since '' is a valid
+	      // value for cost.
+	      if (name !== null) { 
+		  v.name = name; 
+		  draw_canvas();
+	      }
+	      return;
+	  }
+	  
+	  var e = find_edge(x, y);
+	  if (e) {
+	      var cost = window.prompt("Edit the edge cost:", e.edge.cost);
+	      // Note: bug in Safari >= 5.1.  It returns '' on cancel.
+	      // Not really anything we can do about it, since '' is a valid
+	      // value for cost.
+	      if (cost !== null) { 
+		  e.edge.cost = cost; 
+		  draw_canvas();
+	      }
+	  }
+      }
+
+      function click_on_canvas(event) {
+	  var x = event.pageX-$("#myCanvas").offset().left;
+	  var y = event.pageY-$("#myCanvas").offset().top;
+	  
+	  var v = find_vertex(x, y);
+	  // Update the canvas if selected vertex changed.
+	  if (v !== selected_vertex) {
+	      selected_vertex = v;
+	      selected_edge = false;
+	      draw_canvas();
+	  }
+	  // If we didn't click on a vertex, check to see
+	  // if there is an edge nearby.
+	  if (!v) {
+	      var e = find_edge(x, y);
+	      //console.log(JSON.stringify(e.point));
+	      selected_edge = e;
+	      held_edge = e;
+	      draw_canvas();
+	  }
+
+	  // If clicked on an empty area, then create a new vertex there.
+	  if (!v && !e) {
+	      v = new_vertex(x, y);
+	      selected_vertex = v;
+	      draw_canvas();
+	  // If we clicked on an existing vertex, then check for a long click
+          // to see if we should initiate the position changing routine.
+	  } else {
+	      wait_for_long_click(x, y, function() { 
+		  held_vertex = selected_vertex;
+		  nascent_edge = false;
+		  draw_canvas();
+	      });
+	  }
+	  nascent_edge = { v1: v, v2: false};
+      }
+
+      function wait_for_long_click(x, y, callback) {
+	  long_click = {x: x, y: y, valid: true};
+	  setTimeout(function() 
+		     {
+			 if (long_click.valid) { 
+			     long_click.valid = false;
+			     callback(); 
+			 }
+		     }, 
+		     400);
+      }
+
+      function mouse_up(event) {
+	  // If we were creating an edge, check to see if we ended on
+	  // a valid vertex and if so, add the appropriate edge to the graph.
+	  if (nascent_edge && nascent_edge.v2) {
+	      var v2 = find_vertex(nascent_edge.v2.x, nascent_edge.v2.y);
+	      if (v2 && nascent_edge.v1 !== v2) {
+		  new_edge(nascent_edge.v1, v2);
+		  selected_vertex = false;
+	      }
+	  }
+
+	  long_click.valid = false;
+	  held_vertex = false;
+	  nascent_edge = false;
+
+	  held_edge = false;
+	  draw_canvas();
+      }
+
+      function find_bezier_control_point(p0, p2, q, t) {
+	  var a = (1-t)*(1-t);
+	  var b = 2*(1-t)*t;
+	  var c = t*t;
+	  return {x: (q.x - a*p0.x - c*p2.x) / b,
+		  y: (q.y - a*p0.y - c*p2.y) / b};
+      }
+
+      function bezier(p0, p1, p2, t) {
+	  var a = (1-t)*(1-t);
+	  var b = 2*(1-t)*t;
+	  var c = t*t;
+	  return {x: a*p0.x + b*p1.x + c*p2.x,
+		  y: a*p0.y + b*p1.y + c*p2.y};
+      }
+
+      function mouse_moved(event) {
+	  var x = event.pageX-$("#myCanvas").offset().left;
+	  var y = event.pageY-$("#myCanvas").offset().top;
+	  if (long_click.valid) {
+	      if (Math.abs(long_click.x - x) + Math.abs(long_click.y - y) > 10) {
+		  long_click.valid = false;
+	      }
+	  }
+	  
+	  // If there is a held vertex, then it will move with 
+	  // the mouse.
+	  if (held_vertex) {
+	      move_vertex(held_vertex, x, y);
+	      draw_canvas();
+	      return;
+	  }
+
+	  // If there is a held edge, then it will bend as the mouse moves.
+	  if (held_edge) {
+	      var point = held_edge.point;
+	      point.x = x + held_edge.dx;
+	      point.y = y + held_edge.dy;
+	      var edge = held_edge.edge;
+	      edge.cp = find_bezier_control_point(edge.v1, edge.v2, point, point.t);
+	      compute_cp_info(edge);
+	      var angle1 = compute_angle_from_points(edge.v1, edge.v2, edge.cp) * 180 / Math.PI;
+	      var angle2 = compute_angle_from_points(edge.v2, edge.v1, edge.cp) * 180 / Math.PI;
+	      if (Math.abs(angle1) < 0.5 && Math.abs(angle2) < 0.5) {
+		  make_straight_edge(edge);
+	      } else {
+		  edge.straight = false;
+	      }
+	      draw_canvas();
+	      return;
+	  }
+
+	  // Highlight any vertex that the mouse is hovering over.
+	  var v = find_vertex(x, y);
+	  if (v !== hover_vertex) {
+	      hover_vertex = v;
+	      draw_canvas();
+	  }
+
+	  // Update the end-coordinates of the nascent edge.
+	  if (nascent_edge) {
+	      nascent_edge.v2 = {x: x, y: y};
+	      draw_canvas();
+	      return;
+	  }
+
+	  
+	  var hover_edge = find_edge(x, y);
+	  if (hover_edge) {
+	      $('body').css('cursor', 'pointer');
+	      //near_points = [ hover_edge.point ];
+	  } else {
+	      $('body').css('cursor', 'default');
+	      //near_points = [];
+	  }
+	  
+	  /*
+	  near_points = [];
+	  _.each(edges, function(e) {
+	      var p = quadratic_bezier_near_point(e.v1, e.cp, e.v2, {x: x, y: y});
+	      near_points.push(p);
+	  });
+	  */
+
+	  draw_canvas();
+	  
+      }
+
+      function move_vertex(v, x, y) {
+	  // Need to also recalculate the control points for
+	  // every edge that is connected to this vertex.
+	  if (v.x === x && v.y === y) return;
+	  v.x = x;
+	  v.y = y;
+	  var connected = connected_edges(v);
+	  _.each(connected, function(e) {
+	      if (e.straight) {
+		  e.cp = mid_point(e.v1, e.v2);
+	      } else {
+		  construct_cp_from_info(e);
+	      }
+	  });
+      }
+
+      function move_vertex2(v, x, y) {
+	  // Need to also recalculate the control points for
+	  // every edge that is connected to this vertex.
+	  if (v.x === x && v.y === y) return;
+	  var connected = connected_edges(v);
+	  var vnew = {x:x, y:y};
+	  _.each(connected, function(e) {
+	      var other = other_vertex(e, v);
+	      if (e.straight) {
+		  e.cp = mid_point(vnew, other);
+	      } else {
+		  var length = distance(e.v1, e.v2);
+		  var new_length = distance(other, vnew);
+		  var scale = new_length / length;
+		  var theta = compute_angle_from_points(other, v, vnew);
+
+		  e.cp.x -= other.x
+		  e.cp.y -= other.y
+		  		  
+		  e.cp.x *= scale;
+		  e.cp.y *= scale;		  
+
+		  e.cp.x = e.cp.x*Math.cos(theta) - e.cp.y*Math.sin(theta);
+		  e.cp.y = e.cp.x*Math.sin(theta) + e.cp.y*Math.cos(theta);
+
+		  e.cp.x += other.x;
+		  e.cp.y += other.y;
+	      }
+	  });
+	  v.x = x;
+	  v.y = y;
+      }
+
+      // Returns the angle between (v2-v1) and (v3-v1).
+      function compute_angle_from_points(v1, v2, v3) {
+	  var ax = v2.x - v1.x;
+	  var ay = v2.y - v1.y;
+	  var bx = v3.x - v1.x;
+	  var by = v3.y - v1.y;
+	  var angle = Math.acos((ax*bx + ay*by)/Math.sqrt((ax*ax + ay*ay)*(bx*bx + by*by)));
+	  if (ax*by - ay*bx < 0) angle = -angle;
+	  return angle;
+      }
+
+      function new_vertex(x, y) {
+	  var vertex = { x: x, y: y};
+	  vertices.push(vertex);
+	  vertex.name = String.fromCharCode(_.indexOf(vertices, vertex) + 65);
+	  return vertex;
+      }	  
+
+      function mid_point(p, q) {
+	  return {x:(p.x+q.x)/2, y:(p.y+q.y)/2};
+      }
+
+      function new_edge(v1, v2) {
+	  var edge = { v1: v1, v2: v2, cp: mid_point(v1, v2), 
+		       cp_dist: 0, cp_ratio: 0.5, straight: true };
+	  edges.push(edge);
+	  return edge;
+      }
+
+      function make_straight_edge(e) {
+	  e.cp = mid_point(e.v1, e.v2);
+	  e.straight = true;
+      }
+
+      function compute_cp_info(e) {
+	  // vector a = cp - v1.
+	  var ax = e.cp.x - e.v1.x;
+	  var ay = e.cp.y - e.v1.y;
+	  // vector b = v2 - v1.
+	  var bx = e.v2.x - e.v1.x;
+	  var by = e.v2.y - e.v1.y;
+	  var bb = bx*bx + by*by;
+	  if (bb < 1e-6) {
+	      e.cp_dist = 0;
+	      e.cp_ratio = 0.5;
+	  } else {
+	      // Find the perpendicular signed distance from cp to (v2 - v1).	  
+	      e.cp_dist = (ax*by - ay*bx) / Math.sqrt(bb);
+	      // Find the distance between v1 and the projection of cp onto (v2 - v1)
+	      // as a percentage of the length of (v2-v1).
+	      e.cp_ratio = (ax*bx + ay*by) / bb;
+	  }
+      }
+
+      function construct_cp_from_info(e) {
+	  var ax = e.v2.x - e.v1.x;
+	  var ay = e.v2.y - e.v1.y;
+	  var d = Math.sqrt(ax*ax + ay*ay);
+	  // Don't move the control point if the distance between the
+	  // edge vertices is small enough that we are essentially in a 
+	  // degenerate case where the vertices are the same.
+	  if (d < 1e-12) return;
+	  var anchor = {x: e.v1.x + e.cp_ratio*ax, y: e.v1.y + e.cp_ratio*ay};
+	  var ux = ax / d;
+	  var uy = ay / d;
+	  e.cp.x = anchor.x + e.cp_dist*uy;
+	  e.cp.y = anchor.y - e.cp_dist*ux;
+      }
+
+      function edge_to_pstricks(e) {
+	  var nodeA = String.fromCharCode(_.indexOf(vertices, e.v1) + 65);
+	  var nodeB = String.fromCharCode(_.indexOf(vertices, e.v2) + 65);
+	  if (e.straight) {
+	      return "\\ncline{"+nodeA+"}{"+nodeB+"}";
+	  }
+	  var angleA = compute_angle_from_points(e.v1, e.cp, {x:e.v1.x + 1, y:e.v1.y});
+	  var angleB = compute_angle_from_points(e.v2, e.cp, {x:e.v2.x + 1, y:e.v2.y});
+	  angleA = Math.round(angleA * 180 / Math.PI);
+	  angleB = Math.round(angleB * 180 / Math.PI);
+	  var cp1 = {x: e.v1.x + (2/3)*(e.cp.x - e.v1.x), y: e.v1.y + (2/3)*(e.cp.y - e.v1.y)};
+	  var cp2 = {x: e.v2.x + (2/3)*(e.cp.x - e.v2.x), y: e.v2.y + (2/3)*(e.cp.y - e.v2.y)};
+	  var len = distance(e.v1, e.v2);
+	  var ncurvA = (2*distance(e.v1, cp1) / len).toFixed(2);
+	  var ncurvB = (2*distance(e.v2, cp2) / len).toFixed(2);
+	  return "\\nccurve[angleA="+angleA+",angleB="+angleB+",ncurvA="+ncurvA+",ncurvB="+ncurvB
+	      +"]{"+nodeA+"}{"+nodeB+"}";
+      }
+
+      function vertex_to_pstricks(v) {
+	  var canvas = $("#myCanvas")[0];
+	  var x = (v.x * 10 / canvas.width).toFixed(1);
+	  var y = ((canvas.height - v.y) * 10 / canvas.width).toFixed(1);
+	  var name = String.fromCharCode(_.indexOf(vertices, v) + 65);
+	  return "\\vertex{"+x+","+y+"}{"+name+"}";
+      }
+
+      function graph_to_pstricks() {
+	  var canvas = $("#myCanvas")[0];
+	  var w = 10, h = w * canvas.height / canvas.width;
+	  var code = "\\begin{pspicture}(0,0)("+w+","+h+")\n";
+	  code += "\\newcommand{\\vertex}[2]{\\cnodeput[framesep=2pt,shadow=true](#1){#2}{\\textsf{\\footnotesize#2}}}\n";
+	  _.each(vertices, function(v) {
+	      code += vertex_to_pstricks(v) + "\n";
+	  });
+	  _.each(edges, function(e) {
+	      code += edge_to_pstricks(e) + "\n";
+	  });
+	  code += "\\end{pspicture}\n";
+	  return code;
+      }
+
+      function copy_to_clipboard(text) {
+	  var isMac = navigator.platform.toUpperCase().indexOf("MAC") !== -1;
+	  // Note that the Cmd unicode symbol is \u2318
+	  var copyCommand = isMac ? "Cmd+C" : "Ctrl+C";
+      	  window.prompt("Copy to clipboard: Press "+copyCommand+", then Enter", text);
+      }
+
+      function delete_selected_objects() {
+	  if (selected_edge) {
+	      edges = _.without(edges, selected_edge.edge)
+	      selected_edge = false;
+	  }
+	  if (selected_vertex) {
+	      edges = _.difference(edges, connected_edges(selected_vertex));
+	      vertices = _.without(vertices, selected_vertex);
+	      selected_vertex = false;
+	  }
+	  draw_canvas();
+      }
+
+      function find_vertex(x, y, radius) {
+	  if (radius === undefined) {
+	      radius = 14;
+	  }
+	  var r2 = radius*radius;
+	  for (var i = 0, len = vertices.length; i < len; i++) {
+	      var v = vertices[i];
+	      var d = Math.pow(v.x - x, 2) + Math.pow(v.y - y, 2);
+	      if (d <= r2) {
+		  return v;
+	      }
+	  }
+	  return false;
+      }
+
+      // This function returns an OBJECT which contains the 
+      // found edge, the closest point to (x,y) on the edge, and
+      // the deltas from (x,y) to the closest point.
+      function find_edge(x, y, radius) {
+	  if (radius === undefined) radius = 8;
+	  var r2 = radius*radius;
+	  for (var i = 0, len = edges.length; i < len; i++) {
+	      var e = edges[i];
+	      var p = quadratic_bezier_near_point(e.v1, e.cp, e.v2, {x: x, y: y});
+	      var sqdist = (p.x - x)*(p.x - x) + (p.y - y)*(p.y - y);
+	      if (sqdist <= r2) {
+		  return { edge: e, point: p, dx: p.x - x, dy: p.y - y }
+	      }
+	  }
+	  return false;
+      }
+	  
+      function connected_edges(v) {
+	  return _.filter(edges, function(e) { 
+	      return e.v1 === v || e.v2 === v; 
+	  });
+      }
+		 
+      function other_vertex(edge, v) {
+	  if (edge.v1 === v) return edge.v2;
+	  if (edge.v2 === v) return edge.v1;
+	  return undefined;
+      }
+
+      function distance(v1, v2) {
+	  return Math.sqrt( (v2.x-v1.x)*(v2.x-v1.x) + (v2.y-v1.y)*(v2.y-v1.y) );
+      }
+
+      function draw_canvas() {
+	  var canvas = $("#myCanvas")[0];
+	  var ctx = canvas.getContext("2d");
+
+	  clear_canvas();
+	  
+	  // Draw the nascent edge.
+	  if (nascent_edge && nascent_edge.v2 !== false) {
+	      ctx.lineWidth = 3;
+	      ctx.beginPath();
+	      ctx.moveTo(nascent_edge.v1.x, nascent_edge.v1.y);
+	      ctx.lineTo(nascent_edge.v2.x, nascent_edge.v2.y);
+	      ctx.closePath();
+	      ctx.strokeStyle = "#f00";
+	      ctx.stroke();
+	  }
+
+	  // Draw the edges.
+	  ctx.lineWidth = 3;
+	  for (var i = 0, len = edges.length; i < len; i++) {
+	      var e = edges[i];
+	      ctx.beginPath();
+	      ctx.moveTo(e.v1.x, e.v1.y);
+	      ctx.quadraticCurveTo(e.cp.x, e.cp.y, e.v2.x, e.v2.y);
+	      if (e === selected_edge.edge) {
+		  ctx.strokeStyle = "#f00";
+	      } else {
+		  ctx.strokeStyle = "#000";
+	      }
+	      ctx.stroke();
+	      if (e.cost != undefined && e.cost != '') {
+		  var p = bezier(e.v1, e.cp, e.v2, 0.5);
+		  ctx.fillStyle = "#000";
+		  ctx.font = "20px sans-serif";
+		  ctx.fillText(e.cost, p.x, p.y);
+	      }
+	  }
+	  
+	  // Draw the vertices.
+	  for (var i = 0, len = vertices.length; i < len; i++) {
+	      var v = vertices[i];
+	      ctx.beginPath();
+	      // Draw hover_vertex a bit larger
+	      // (when the mouse cursor is hovering above them)
+	      if (v === hover_vertex) {
+		  ctx.arc(v.x, v.y, 12, 0, 6.28319, false);
+	      } else {
+		  ctx.arc(v.x, v.y, 10, 0, 6.28319, false);
+	      }
+	      ctx.closePath();
+	      // Draw the selected vertex in different color.
+	      if (v === selected_vertex) {
+		  ctx.fillStyle = "#fff";
+		  ctx.strokeStyle = "#f00";
+	      } else {
+		  ctx.fillStyle = "#fff";
+		  ctx.strokeStyle = "#000";
+	      }
+	      ctx.lineWidth = 4;
+	      ctx.shadowColor = "#555";
+	      ctx.shadowOffsetX = 2;
+	      ctx.shadowOffsetY = 2;
+	      ctx.shadowBlur = 5;
+	      ctx.fill();
+	      ctx.shadowColor = 'transparent';
+	      ctx.stroke();
+	      // Draw a halo around a held (long-mouse-press) vertex 
+	      if (v === held_vertex) {
+		  ctx.beginPath();
+		  ctx.arc(v.x, v.y, 18, 0, 6.28319, false);
+		  ctx.closePath();
+		  //ctx.strokeStyle = ctx.fillStyle;
+		  ctx.lineWidth = 2;
+		  ctx.stroke();
+	      }
+	  }
+
+	  // Draw the vertex names
+	  for (var i = 0, len = vertices.length; i < len; i++) {
+	      var v = vertices[i];
+	      if (v.name !== undefined && v.name != '') {
+		  //ctx.shadowColor = "#000";
+		  //ctx.shadowOffsetX = 0;
+		  //ctx.shadowOffsetY = 0;
+		  //ctx.shadowBlur = 5;
+		  ctx.textBaseline = "middle";
+		  ctx.fillStyle = "#000";
+		  if (v === hover_vertex) {
+		      ctx.font = "bold 18px sans-serif";
+		      ctx.fillText(v.name, v.x-6, v.y);
+		  } else {
+		      ctx.font = "bold 14px sans-serif";
+		      ctx.fillText(v.name, v.x-5, v.y);
+		  }
+	      }
+	  }
+	  ctx.shadowBlur = 0;
+
+	  /*
+	  // Draw the nearest points (debug)
+	  for (var i = 0, len = near_points.length; i < len; i++) {
+	      var v = near_points[i];
+	      ctx.beginPath();
+	      ctx.arc(v.x, v.y, 4, 0, 6.28319, false);
+	      ctx.closePath();
+	      ctx.fillStyle = "#000";
+	      ctx.fill();
+	  }
+	  */
+      }
+
+      function clear_canvas() {
+	  var canvas = $("#myCanvas")[0];
+	  var ctx = canvas.getContext("2d");
+	  ctx.save();
+	  ctx.setTransform(1, 0, 0, 1, 0, 0);
+	  ctx.clearRect(0, 0, canvas.width, canvas.height);
+	  ctx.restore();
+      }
+
+    </script>
+  </head>
+  <body>
+    
+    
+    <div id="canvas_div">
+      <canvas class="canvas" id="myCanvas"></canvas>
+    </div>
+
+    <script type="text/javascript">
+      $(function() {
+	  init_canvas("#myCanvas");
+	  $(window).keydown(function(event) {
+	      var keycode = event.keyCode || event.which;
+	      if (keycode === 80) { // pressed "P"
+		  copy_to_clipboard(graph_to_pstricks());
+	      } else if (keycode === 8 || keycode === 46) {
+		  delete_selected_objects();
+	      } else if (keycode === 27) {
+		  selected_edge = false;
+		  selected_vertex = false;
+		  draw_canvas();
+	      } else if (keycode === 83) { // pressed "S"
+		  if (selected_edge) {
+		      make_straight_edge(selected_edge);
+		  }
+	  });
+      });
+    </script>
+
+  </body>
+</html>
