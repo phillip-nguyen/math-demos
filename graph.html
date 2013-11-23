@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html>
   <head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>Graph Theory</title>
     <link rel="stylesheet" href="http://ajax.googleapis.com/ajax/libs/jqueryui/1.10.3/themes/smoothness/jquery-ui.min.css"/>
     <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.10.1/jquery.min.js"></script>
@@ -183,6 +184,21 @@
 	  $(name).mousemove(mouse_moved);
 	  $(name).mouseup(mouse_up);
 	  $(name).dblclick(double_click_on_canvas);
+	  canvas.addEventListener("touchstart", function(e) {
+	      e.preventDefault();
+	      var touch = e.targetTouches[0] || e.touches[0];
+	      click_on_canvas(touch);
+	  }, false);
+	  canvas.addEventListener("touchend", function(e) {
+	      e.preventDefault();
+	      var touch = e.targetTouches[0] || e.touches[0] || e.changedTouches[0];
+	      mouse_up(touch);
+	  }, false);
+	  canvas.addEventListener("touchmove", function(e) {
+	      e.preventDefault();
+	      var touch = e.touches[0] || e.changedTouches[0];
+	      mouse_moved(touch);
+	  }, false);
       }
 
       function double_click_on_canvas(event) {
@@ -274,6 +290,7 @@
 
 	  long_click.valid = false;
 	  held_vertex = false;
+	  hover_vertex = false;
 	  nascent_edge = false;
 
 	  held_edge = false;
@@ -306,7 +323,7 @@
 	  // While waiting for a long click, make sure that the mouse does not
 	  // move too far away from the initial click point.
 	  if (long_click.valid) {
-	      if (Math.abs(long_click.x - x) + Math.abs(long_click.y - y) > 10) {
+	      if (Math.abs(long_click.x - x) + Math.abs(long_click.y - y) > 12) {
 		  long_click.valid = false;
 	      }
 	  }
@@ -540,7 +557,7 @@
       // from the point (x,y) is less than radius. 
       // Returns undefined if no such vertex is found.
       function find_vertex(x, y, radius) {
-	  if (radius === undefined) radius = 14;
+	  if (radius === undefined) radius = 22;
 	  var rsq = radius*radius;
 	  return _.find(theGraph.vertices, function(v) {
 	      var d = Math.pow(v.x - x, 2) + Math.pow(v.y - y, 2);
@@ -603,32 +620,40 @@
 	  }
 
 	  // Draw the edges.
-	  ctx.lineWidth = 3;
-	  ctx.textBaseline = "alphabetic";
+	  ctx.lineWidth = 4;
 	  _.each(theGraph.edges, function(e) {
 	      ctx.beginPath();
 	      ctx.moveTo(e.v1.x, e.v1.y);
 	      ctx.quadraticCurveTo(e.cp.x, e.cp.y, e.v2.x, e.v2.y);
 	      ctx.strokeStyle = (e === selected_edge.edge) ? "#f00" : "#000";
 	      ctx.stroke();
+	  });
+		 
+	  // Draw the edge costs.
+	  ctx.fillStyle = "#000";
+	  ctx.strokeStyle = "rgba(255,255,255,0.9)";
+	  ctx.linewidth = 1;
+	  ctx.font = "bold 18px sans-serif";
+	  ctx.textBaseline = "middle";
+	  ctx.textAlign = "center"
+	  _.each(theGraph.edges, function(e) {
 	      if (e.cost != undefined && e.cost != '') {
 		  var p = bezier(e.v1, e.cp, e.v2, 0.5);
-		  ctx.fillStyle = "#000";
-		  ctx.font = "14px sans-serif";
+		  ctx.strokeText(e.cost, p.x, p.y);
 		  ctx.fillText(e.cost, p.x, p.y);
 	      }
 	  });
 	  
 	  // Draw the vertices.
 	  ctx.shadowOffsetX = 2;
-	  ctx.shadowOffsetY = 2;
+	  ctx.shadowOffsetY = 4;
 	  ctx.shadowBlur = 5;
 	  ctx.lineWidth = 4;
 	  _.each(theGraph.vertices, function(v) {
 	      ctx.beginPath();
 	      // The hover_vertex is the vertex underneath the mouse cursor.
 	      // We draw the hover_vertex slightly larger.
-	      var size = (v === hover_vertex) ? 12 : 10;
+	      var size = (v === hover_vertex) ? 22 : 18;
 	      ctx.arc(v.x, v.y, size, 0, 6.28319, false);
 	      ctx.closePath();
 	      // Draw the selected vertex in different color.
@@ -643,7 +668,6 @@
 	      ctx.fill();
 	      ctx.shadowColor = 'transparent';
 	      ctx.stroke();
-
 	  });
 
 	  // Draw a halo around the held_vertex.  This is the vertex
@@ -653,7 +677,7 @@
 	      ctx.strokeStyle = "#f00";
 	      ctx.shadowColor = 'transparent';
 	      ctx.beginPath();
-	      ctx.arc(held_vertex.vertex.x, held_vertex.vertex.y, 20, 0, 6.28319, false);
+	      ctx.arc(held_vertex.vertex.x, held_vertex.vertex.y, 36, 0, 6.28319, false);
 	      ctx.closePath();
 	      ctx.stroke();	      
 	  }
@@ -662,12 +686,13 @@
 	  ctx.textBaseline = "middle";
 	  ctx.textAlign = "center"
 	  ctx.fillStyle = "#000";
+	  ctx.shadowColor = 'transparent';
 	  _.each(theGraph.vertices, function (v) {
 	      if (v.name !== undefined && v.name != '') {
 		  if (v === hover_vertex) {
-		      ctx.font = "bold 18px sans-serif";
+		      ctx.font = "bold 28px sans-serif";
 		  } else {
-		      ctx.font = "bold 14px sans-serif";
+		      ctx.font = "bold 24px sans-serif";
 		  }
 		  ctx.fillText(v.name, v.x+0.5, v.y);
 	      }
