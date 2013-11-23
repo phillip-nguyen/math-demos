@@ -3,23 +3,31 @@
   <head>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>Graph Theory</title>
-    <link rel="stylesheet" href="http://ajax.googleapis.com/ajax/libs/jqueryui/1.10.3/themes/smoothness/jquery-ui.min.css"/>
+    <link rel="stylesheet" href="http://ajax.googleapis.com/ajax/libs/jqueryui/1.10.3/themes/start/jquery-ui.min.css"/>
     <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.10.1/jquery.min.js"></script>
     <script src="http://ajax.googleapis.com/ajax/libs/jqueryui/1.10.3/jquery-ui.min.js"></script>
     <script src="http://cdnjs.cloudflare.com/ajax/libs/underscore.js/1.5.2/underscore-min.js"></script>
     <style>
-      html, body { height: 95%; }
+      html, body { height: 95%; padding: 0; }
+      .ui-widget { font-size: 12px; }
+      .ui-dialog-buttonpane { 
+          border: none;
+          margin: 0px !important; 
+          padding: 0px !important;
+      }
+      /* .ui-dialog-buttonset { border: 1px solid red;}*/
       #canvas_div {
-	  width: 800px;
-	  height: 800px;
+	  width: 100%;
+	  height: 100%;
 	  position: relative;
 	  margin: 0 auto;
       }
       .canvas { 
-	  width: 800px;
-	  height: 800px;
+	  width: 100%;
+	  height: 100%;
 	  border: 1px solid gray;
-	  margin: 0px;
+	  margin: 0 auto;
+          padding: 0px;
 	  position: absolute;
 	  left: 0;
 	  top: 0;
@@ -312,14 +320,10 @@
 	  
 	  var e = find_edge(x, y);
 	  if (e) {
-	      var cost = window.prompt("Edit the edge cost:", e.edge.cost);
-	      // Note: bug in Safari >= 5.1.  It returns '' on cancel.
-	      // Not really anything we can do about it, since '' is a valid
-	      // value for cost.
-	      if (cost !== null) { 
-		  e.edge.cost = cost; 
-		  draw_canvas();
-	      }
+	      $("#edge-dialog")
+		  .data("edge", e.edge)
+		  .dialog("open");
+	      return;
 	  }
       }
 
@@ -922,14 +926,19 @@
       <input type="text" name="vertex-name" id="vertex-name" class="text ui-widget-content ui-corner-all"/>
     </div>
 
+    <div id="edge-dialog" title="Edit edge">
+      <label for="edge-cost">Cost:</label>
+      <input type="text" name="edge-cost" id="edge-cost" class="text ui-widget-content ui-corner-all"/>
+    </div>
+
     <script type="text/javascript">
       $(function() {
 	  init_canvas("#myCanvas");
 
 	  $("#vertex-dialog").dialog({
 	      autoOpen: false,
-	      height: 200,
-	      width: 350,
+	      height: 120,
+	      width: 300,
 	      modal: true,
 	      open: function() {
 		  $("#vertex-name")
@@ -948,6 +957,30 @@
 	      }
 	  });
 
+	  $("#edge-dialog").dialog({
+	      autoOpen: false,
+	      height: 120,
+	      width: 300,
+	      modal: true,
+	      open: function() {
+		  $("#edge-cost")
+		      .val($(this).data("edge").cost)
+		      .select();
+	      },
+	      buttons: {
+		  "OK": function() {
+		      $(this).data("edge").cost = $("#edge-cost").val();
+		      $(this).dialog("close");
+		      draw_canvas();
+		  },
+		  "Cancel": function() {
+		      $(this).dialog("close");
+		  }
+	      }
+	  });
+
+	  // When user presses enter inside a dialog, it should be equivalent to clicking
+	  // the first button of the dialog.
 	  $(document).delegate('.ui-dialog', 'keydown', function(e) {
 	      var tagName= e.target.tagName.toLowerCase();
 	      
