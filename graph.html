@@ -580,9 +580,23 @@
       function new_vertex(x, y) {
 	  var vertex = { x: x, y: y};
 	  theGraph.vertices.push(vertex);
-	  vertex.name = String.fromCharCode(_.indexOf(theGraph.vertices, vertex) + 65);
+	  vertex.name = get_unique_vertex_name();
 	  return vertex;
       }	  
+
+      function get_unique_vertex_name() {
+	  var names = _.uniq(_.pluck(theGraph.vertices, 'name'));
+	  for (var i = 1; i < 9; i++) {
+	      for (var code = 65; code <= 90; code++) {
+		  var ch = String.fromCharCode(code);
+		  if (i !== 1) ch += String(i);
+		  if (!_.contains(names, ch)) {
+		      return ch;
+		  }
+	      }
+	  }
+	  return "ENRIQUE";
+      }
 
       // Returns the midpoint of two vertices.
       function midpoint(p, q) {
@@ -766,6 +780,57 @@
 	  return Math.sqrt( (v2.x-v1.x)*(v2.x-v1.x) + (v2.y-v1.y)*(v2.y-v1.y) );
       }
 
+      function draw_vertex(v, ctx) {
+	  ctx.shadowOffsetX = 2;
+	  ctx.shadowOffsetY = 4;
+	  ctx.shadowBlur = 5;
+	  ctx.lineWidth = 4;
+	  ctx.beginPath();
+	  // The hover_vertex is the vertex underneath the mouse cursor.
+	  // We draw the hover_vertex slightly larger.
+	  var size = (v === hover_vertex) ? 22 : 18;
+	  ctx.arc(v.x, v.y, size, 0, 6.28319, false);
+	  ctx.closePath();
+	  // Draw the selected vertex in different color.
+	  if (_.contains(selected_objects, v)) {
+	      ctx.fillStyle = "#fff";
+	      ctx.strokeStyle = "#f00";
+	  } else {
+	      ctx.fillStyle = "#fff";
+	      ctx.strokeStyle = "#000";
+	  }
+	  ctx.shadowColor = "#555";
+	  ctx.fill();
+	  ctx.shadowColor = 'transparent';
+	  ctx.stroke();	      
+	  
+	  // Draw the vertex name
+	  ctx.textBaseline = "middle";
+	  ctx.textAlign = "center"
+	  ctx.fillStyle = "#000";
+	  ctx.shadowColor = 'transparent';
+	  if (v.name !== undefined && v.name != '') {
+	      if (v === hover_vertex) {
+		  ctx.font = "bold 28px sans-serif";
+	      } else {
+		  ctx.font = "bold 24px sans-serif";
+	      }
+	      ctx.fillText(v.name, v.x+0.5, v.y);
+	  }
+	  
+	  // Draw a halo around the held_vertex.  This is the vertex
+	  // is underneath long mouse click.
+	  if (v === held_vertex.vertex) {
+	      ctx.lineWidth = 2;
+	      ctx.strokeStyle = "#f00";
+	      ctx.shadowColor = 'transparent';
+	      ctx.beginPath();
+	      ctx.arc(v.x, v.y, 36, 0, 6.28319, false);
+	      ctx.closePath();
+	      ctx.stroke();	      
+	  }
+      }
+
       function draw_canvas() {
 	  var canvas = $("#myCanvas")[0];
 	  var ctx = canvas.getContext("2d");
@@ -779,7 +844,7 @@
 	      ctx.moveTo(nascent_edge.v1.x, nascent_edge.v1.y);
 	      ctx.lineTo(nascent_edge.v2.x, nascent_edge.v2.y);
 	      ctx.closePath();
-	      ctx.strokeStyle = "#f00";
+	      ctx.strokeStyle = (hover_vertex) ? "#000" : "#0b0";
 	      ctx.stroke();
 	  }
 
@@ -810,59 +875,16 @@
 	      }
 	  });
 	  
+
 	  // Draw the vertices.
-	  ctx.shadowOffsetX = 2;
-	  ctx.shadowOffsetY = 4;
-	  ctx.shadowBlur = 5;
-	  ctx.lineWidth = 4;
 	  _.each(theGraph.vertices, function(v) {
-	      ctx.beginPath();
-	      // The hover_vertex is the vertex underneath the mouse cursor.
-	      // We draw the hover_vertex slightly larger.
-	      var size = (v === hover_vertex) ? 22 : 18;
-	      ctx.arc(v.x, v.y, size, 0, 6.28319, false);
-	      ctx.closePath();
-	      // Draw the selected vertex in different color.
-	      if (_.contains(selected_objects, v)) {
-		  ctx.fillStyle = "#fff";
-		  ctx.strokeStyle = "#f00";
-	      } else {
-		  ctx.fillStyle = "#fff";
-		  ctx.strokeStyle = "#000";
-	      }
-	      ctx.shadowColor = "#555";
-	      ctx.fill();
-	      ctx.shadowColor = 'transparent';
-	      ctx.stroke();
-	  });
-
-	  // Draw a halo around the held_vertex.  This is the vertex
-	  // is underneath long mouse click.
-	  if (held_vertex) {
-	      ctx.lineWidth = 2;
-	      ctx.strokeStyle = "#f00";
-	      ctx.shadowColor = 'transparent';
-	      ctx.beginPath();
-	      ctx.arc(held_vertex.vertex.x, held_vertex.vertex.y, 36, 0, 6.28319, false);
-	      ctx.closePath();
-	      ctx.stroke();	      
-	  }
-
-	  // Draw the vertex names
-	  ctx.textBaseline = "middle";
-	  ctx.textAlign = "center"
-	  ctx.fillStyle = "#000";
-	  ctx.shadowColor = 'transparent';
-	  _.each(theGraph.vertices, function (v) {
-	      if (v.name !== undefined && v.name != '') {
-		  if (v === hover_vertex) {
-		      ctx.font = "bold 28px sans-serif";
-		  } else {
-		      ctx.font = "bold 24px sans-serif";
-		  }
-		  ctx.fillText(v.name, v.x+0.5, v.y);
+	      if (v !== held_vertex.vertex) {
+		  draw_vertex(v, ctx);
 	      }
 	  });
+
+	  // Draw the hover_vertex last.
+	  if (held_vertex) draw_vertex(held_vertex.vertex, ctx);
 
 	  /* // DEBUG
 	  // Draw the nearest point on each edge to the mouse cursor.
