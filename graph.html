@@ -948,7 +948,9 @@
     </div>
 
     <div id="code-dialog" title="LaTeX/PSTricks Code">
-      <textarea id="code-textarea" rows="11" cols="80" wrap="off" readonly="true"></textarea>
+      <textarea id="code-textarea" rows="11" cols="80" wrap="off" 
+		onkeydown="event.preventDefault();event.stopPropagation();return false;"
+		oncut="event.preventDefault();event.stopPropagation();return false;"></textarea>
     </div>
 
     <script type="text/javascript">
@@ -1028,6 +1030,8 @@
 		  $("#code-textarea")
 		      .val(graph_to_pstricks())
 		      .select();
+		  // Hack for iOS to make sure text is actually selected.
+		  $("#code-textarea")[0].setSelectionRange(0, 9999);
 	      },
 	      buttons: {
 		  "OK": function() {
