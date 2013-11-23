@@ -819,16 +819,19 @@
 	  ctx.stroke();	      
 	  
 	  // Draw the vertex name
-	  ctx.textBaseline = "middle";
-	  ctx.textAlign = "center"
-	  ctx.fillStyle = "#000";
-	  ctx.shadowColor = 'transparent';
 	  if (v.name !== undefined && v.name != '') {
+	      ctx.textBaseline = "middle";
+	      ctx.textAlign = "center"
+	      ctx.fillStyle = "#000";
+	      ctx.shadowColor = 'transparent';
+	      ctx.strokeStyle = "rgba(255,255,255,0.9)";
+	      ctx.linewidth = 1;
 	      if (v === hover_vertex) {
 		  ctx.font = "bold 28px sans-serif";
 	      } else {
 		  ctx.font = "bold 24px sans-serif";
 	      }
+	      ctx.strokeText(v.name, v.x+0.5, v.y);
 	      ctx.fillText(v.name, v.x+0.5, v.y);
 	  }
 	  
