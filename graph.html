@@ -30,15 +30,14 @@
 
       var theGraph = { vertices: [], edges: [] }
 
-      var selected_vertex = false;
-      var hover_vertex = false;
-      var long_click = {};
-      var held_vertex = false;
-      var nascent_edge = false;
-      var near_points = [];
+      var selected_objects = [];
 
-      var selected_edge = false;
+      var hover_vertex = false;
+      var held_vertex = false;
       var held_edge = false;
+      var nascent_edge = false;
+
+      //var near_points = [];
 
       // Returns a signed cube root of x.  Necessary since the
       // javascript pow function cannot handle negative arguments.
@@ -180,13 +179,15 @@
 	  	  
 	  //ctx.translate(0.5, 0.5);
 
-	  $(name).mousedown(click_on_canvas);
-	  $(name).mousemove(mouse_moved);
-	  $(name).mouseup(mouse_up);
-	  $(name).dblclick(double_click_on_canvas);
+	  canvas.addEventListener("mousedown", touchStart);
 	  canvas.addEventListener("touchstart", touchStart);
+
+	  canvas.addEventListener("mouseup", touchEnd);
 	  canvas.addEventListener("touchend", touchEnd);
+
+	  canvas.addEventListener("mousemove", touchMove);	  
 	  canvas.addEventListener("touchmove", touchMove);
+
 	  canvas.addEventListener("touchcancel", touchCancel);
       }
 
@@ -194,6 +195,7 @@
 			   pressDuration: 300, 
 			   motionThreshold: 12,
 			   doubleTapInterval: 300,
+			   doubleTapDistanceThreshold: 30
 			 };
       
       function touchStart(event) {
@@ -214,11 +216,12 @@
 	      if (!touchHandler.motion) {
 		  touchHandler.press = true;
 		  // Fire a press event.
+		  canvas_long_press(touch);
 	      }
 	  }, touchHandler.pressDuration);
 
 	  // Fire a touch event?
-	  click_on_canvas(touch);
+	  canvas_select(touch);
       }
 
       function touchEnd(event) {
@@ -239,15 +242,16 @@
 	      // 3. the previous tap and this tap are not too far away.
 	      if (touchHandler.previousTap && 
 		  timeStamp - touchHandler.previousTime < touchHandler.doubleTapInterval &&
-		  Math.abs(touchHandler.previousTap.x - touchHandler.start.x) < touchHandler.motionThreshold &&
-		  Math.abs(touchHandler.previousTap.y - touchHandler.start.y) < touchHandler.motionThreshold) {
+		  Math.abs(touchHandler.previousTap.x - touchHandler.start.x) < touchHandler.doubleTapDistanceThreshold &&
+		  Math.abs(touchHandler.previousTap.y - touchHandler.start.y) < touchHandler.doubleTapDistanceThreshold) {
 		  // Fire a double tap event.
-		  double_click_on_canvas(touch);
+		  canvas_doubletap(touch);
 		  
 		  // Prevent a future double tap from firing.
 		  touchHandler.previousTap = false;
 	      } else {
 		  // Fire a tap event.
+		  canvas_tap(touch);
 
 		  // Store info for double tap.
 		  touchHandler.previousTap = touchHandler.start;
@@ -255,29 +259,34 @@
 	      }
 	  }
 
+	  touchHandler.start = false;
+
 	  // Fire touch end event?
-	  mouse_up(touch);
+	  canvas_mouseup(touch);
       }
 
       function touchMove(event) {
 	  event.preventDefault();
 	  var touch = touchHandler.hasTouch ? (event.targetTouches[0] || event.changedTouches[0] || event.touches[0]) : event;
-	  var delta = {x: touch.pageX - touchHandler.start.x, y: touch.pageY - touchHandler.start.y};
 
-	  // If we haven't moved that far from the start position,
-	  // then we don't count it as true movement event.
-	  if (Math.abs(delta.x) <= touchHandler.motionThreshold && 
-	      Math.abs(delta.y) <= touchHandler.motionThreshold)
-	      return;
+	  if (touchHandler.start) {
+	      var delta = {x: touch.pageX - touchHandler.start.x, y: touch.pageY - touchHandler.start.y};
+
+	      // If we haven't moved that far from the start position,
+	      // then we don't count it as true movement event.
+	      if (Math.abs(delta.x) <= touchHandler.motionThreshold && 
+		  Math.abs(delta.y) <= touchHandler.motionThreshold)
+		  return;
+	  }
 	  
 	  touchHandler.motion = true;
-	  touchHandler.previousTap = false;
+	  //touchHandler.previousTap = false;
 	  
 	  // Cancel press timeout.
 	  clearTimeout(touchHandler.pressCallback);
 	  
 	  // Fire a drag event.
-	  mouse_moved(touch);
+	  canvas_drag(touch);
       }
 
       // Not really sure what this event is.
@@ -286,10 +295,10 @@
 	  var touch = touchHandler.hasTouch ? (event.targetTouches[0] || event.changedTouches[0] || event.touches[0]) : event;
 	  touchHandler.cancel = true;
 	  touchHandler.previousTap = false;
+	  touchHandler.start = false;
       }
 
-
-      function double_click_on_canvas(event) {
+      function canvas_doubletap(event) {
 	  var x = event.pageX-$("#myCanvas").offset().left;
 	  var y = event.pageY-$("#myCanvas").offset().top;
 
@@ -314,29 +323,57 @@
 	  }
       }
 
-      function canvas_select(event) {
+      function canvas_tap(event) {
 	  var x = event.pageX-$("#myCanvas").offset().left;
 	  var y = event.pageY-$("#myCanvas").offset().top;
 
 	  var v = find_vertex(x, y);
-	  // Update the canvas if selected vertex changed.
-	  if (v !== selected_vertex) {
-	      selected_vertex = v;
-	      selected_edge = false;
+	  if (v) {
+	      // Toggle the vertex's membership in selected_objects.
+	      if (_.contains(selected_objects, v)) {
+		  selected_objects = _.without(selected_objects, v);
+	      } else {
+		  selected_objects.push(v);
+	      }
+	      draw_canvas()
+	  } else {
+	      var e = find_edge(x, y);
+	      if (e) {
+		  // Toggle the edge's membership in selected_objects.
+		  // Note that we store the actual edge, and not the wrapper object
+		  // returned by find_edge.
+		  if (_.contains(selected_objects, e.edge)) {
+		      selected_objects = _.without(selected_objects, e.edge);
+		  } else {
+		      selected_objects.push(e.edge);
+		  }
+		  draw_canvas();
+	      }
+	  }
+
+	  // If we didn't hit anything, create a new vertex at the tap location.
+	  if (!v && !e) {
+	      new_vertex(x, y);
 	      draw_canvas();
 	  }
-	  
-	  // If we didn't click on a vertex, check to see
-	  // if there is an edge nearby.
-	  if (!v) {
-	      var e = find_edge(x, y);
-	      selected_edge = e; 
-	      held_edge = e; 
-	      draw_canvas();
+      }
+
+      function canvas_select(event) {
+	  var x = event.pageX-$("#myCanvas").offset().left;
+	  var y = event.pageY-$("#myCanvas").offset().top;
+
+	  // Check for vertex first.
+	  var v = find_vertex(x, y);
+	  if (v) {
+	      // If we did click on a vertex, start drawing a new edge from it.
+	      nascent_edge = { v1: v, v2: false };
 	  } else {
-	      // If we did click on a vertex, start a new edge from
-	      // this vertex.
-	      nascent_edge = { v1: v, v2: false};
+	      // If no vertex hit, check for edge hit.
+	      var e = find_edge(x, y);
+	      if (e) {
+		  // If we clicked on an edge, keep track of it for future drag operations.
+		  held_edge = e;
+	      }
 	  }
       }
 
@@ -346,15 +383,11 @@
 	  
 	  var v = find_vertex(x, y);
 	  // Initiate vertex move, stop drawing any edge, update canvas.
-	  if (v === selected_vertex) {
-	      held_vertex = { vertex: selected_vertex, dx: selected_vertex.x - x, dy: selected_vertex.y - y };
+	  if (v) {
+	      held_vertex = { vertex: v, dx: v.x - x, dy: v.y - y };
 	      nascent_edge = false;
 	      draw_canvas();
-	  } else {
-	      selected_vertex = v;
-	      selected_edge = false;
-	      draw_canvas();
-	  } 
+	  }
       }
 
       function canvas_drag(event) {
@@ -410,69 +443,16 @@
 	  }	  
       }	  
 
-      function click_on_canvas(event) {
-	  var x = event.pageX-$("#myCanvas").offset().left;
-	  var y = event.pageY-$("#myCanvas").offset().top;
-	  
-	  var v = find_vertex(x, y);
-	  // Update the canvas if selected vertex changed.
-	  if (v !== selected_vertex) {
-	      selected_vertex = v;
-	      selected_edge = false;
-	      draw_canvas();
-	  }
-	  // If we didn't click on a vertex, check to see
-	  // if there is an edge nearby.
-	  if (!v) {
-	      var e = find_edge(x, y);
-	      selected_edge = e; 
-	      held_edge = e; 
-	      draw_canvas();
-	  }
-
-	  // If clicked on an empty area, then create a new vertex there.
-	  if (!v && !e) {
-	      v = new_vertex(x, y);
-	      selected_vertex = v;
-	      draw_canvas();
-	  // If we clicked on an existing vertex, then check for a long click
-          // to see if we should initiate the position changing routine.
-	  } else {
-	      wait_for_long_click(x, y, function() { 
-		  held_vertex = { vertex: selected_vertex, dx: selected_vertex.x - x, dy: selected_vertex.y - y };
-		  nascent_edge = false;
-		  draw_canvas();
-	      });
-	  }
-	  nascent_edge = { v1: v, v2: false};
-      }
-
-      // Sets a timer in order to determine if the user held the mouse
-      // button down for a certain duration of time.
-      function wait_for_long_click(x, y, callback) {
-	  long_click = {x: x, y: y, valid: true};
-	  setTimeout(function() 
-		     {
-			 if (long_click.valid) { 
-			     long_click.valid = false;
-			     callback(); 
-			 }
-		     }, 
-		     400);
-      }
-
-      function mouse_up(event) {
+      function canvas_mouseup(event) {
 	  // If we were creating an edge, check to see if we ended on
 	  // a valid vertex and if so, add the appropriate edge to the graph.
 	  if (nascent_edge && nascent_edge.v2) {
 	      var v2 = find_vertex(nascent_edge.v2.x, nascent_edge.v2.y);
 	      if (v2 && nascent_edge.v1 !== v2) {
 		  new_edge(nascent_edge.v1, v2);
-		  selected_vertex = false;
 	      }
 	  }
 
-	  long_click.valid = false;
 	  held_vertex = false;
 	  hover_vertex = false;
 	  nascent_edge = false;
@@ -725,15 +705,15 @@
       // Removes the currently selected edge and vertex (if any) from the graph.
       // If a vertex is removed, all the edges connected to it are also removed.
       function delete_selected_objects() {
-	  if (selected_edge) {
-	      theGraph.edges = _.without(theGraph.edges, selected_edge.edge)
-	      selected_edge = false;
-	  }
-	  if (selected_vertex) {
-	      theGraph.edges = _.difference(theGraph.edges, connected_edges(selected_vertex));
-	      theGraph.vertices = _.without(theGraph.vertices, selected_vertex);
-	      selected_vertex = false;
-	  }
+	  _.each(selected_objects, function(x) {
+	      if (x.v1) {
+		  theGraph.edges = _.without(theGraph.edges, x);
+	      } else {
+		  theGraph.edges = _.difference(theGraph.edges, connected_edges(x));
+		  theGraph.vertices = _.without(theGraph.vertices, x);
+	      }
+	  });
+	  selected_objects = [];
 	  draw_canvas();
       }
 
@@ -809,7 +789,9 @@
 	      ctx.beginPath();
 	      ctx.moveTo(e.v1.x, e.v1.y);
 	      ctx.quadraticCurveTo(e.cp.x, e.cp.y, e.v2.x, e.v2.y);
-	      ctx.strokeStyle = (e === selected_edge.edge) ? "#f00" : "#000";
+	      // BUG: the edges in selected objects aren't really edges,
+	      // so need to do some other kind of test here.
+	      ctx.strokeStyle = (_.contains(selected_objects, e)) ? "#f00" : "#000";
 	      ctx.stroke();
 	  });
 		 
@@ -841,7 +823,7 @@
 	      ctx.arc(v.x, v.y, size, 0, 6.28319, false);
 	      ctx.closePath();
 	      // Draw the selected vertex in different color.
-	      if (v === selected_vertex) {
+	      if (_.contains(selected_objects, v)) {
 		  ctx.fillStyle = "#fff";
 		  ctx.strokeStyle = "#f00";
 	      } else {
@@ -964,13 +946,14 @@
 		      delete_selected_objects();
 		  }
 	      } else if (keycode === 27) {
-		  selected_edge = false;
-		  selected_vertex = false;
+		  selected_objects = [];
 		  draw_canvas();
 	      } else if (keycode === 83) { // pressed "S"
-		  if (selected_edge) {
-		      make_straight_edge(selected_edge.edge);
-		  }
+		  _.each(selected_objects, function(e) {
+		      if (e.v1) {
+			  make_straight_edge(e);
+		      }
+		  });
 	      }
 	  });
       });
