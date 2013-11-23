@@ -8,7 +8,7 @@
     <script src="http://ajax.googleapis.com/ajax/libs/jqueryui/1.10.3/jquery-ui.min.js"></script>
     <script src="http://cdnjs.cloudflare.com/ajax/libs/underscore.js/1.5.2/underscore-min.js"></script>
     <style>
-      html, body { height: 95%; padding: 0; }
+      html, body { height: 99%; padding: 0px; margin: 5px;}
       .ui-widget { font-size: 12px; }
       .ui-dialog-buttonpane { 
           border: none;
@@ -16,9 +16,8 @@
           padding: 0px !important;
       }
       /* .ui-dialog-buttonset { border: 1px solid red;}*/
-      #canvas_div {
+      #canvas-div {
 	  width: 100%;
-	  height: 100%;
 	  position: relative;
 	  margin: 0 auto;
       }
@@ -31,6 +30,12 @@
 	  position: absolute;
 	  left: 0;
 	  top: 0;
+      }
+      #toolbar {
+          width: 100%;
+          padding: 0px;
+          margin: 3px auto;
+          position: relative;
       }
     </style>
     <script type="text/javascript">
@@ -180,6 +185,8 @@
       }
 
       function init_canvas(name) {
+	  $("#canvas-div").height($(window).height() - $("#toolbar").outerHeight(true) - $("body").offset().top);
+
 	  var canvas = $(name)[0];
 	  canvas.width = $(name).width();
 	  canvas.height = $(name).height();
@@ -913,10 +920,15 @@
     </script>
   </head>
   <body>
-    
-    
-    <div id="canvas_div">
+        
+    <div id="canvas-div">
       <canvas class="canvas" id="myCanvas"></canvas>
+    </div>
+
+    <div id="toolbar">
+      <button id="code-button">Display LaTeX/PSTricks code</button>
+      <button id="clear-selection-button">Clear selection</button>
+      <button id="delete-button">Delete selected objects</button>
     </div>
 
     <div id="vertex-dialog" title="Edit vertex">
@@ -931,7 +943,19 @@
 
     <script type="text/javascript">
       $(function() {
-	  init_canvas("#myCanvas");
+	  $("#delete-button").button().click(function(event) {
+	      delete_selected_objects();
+	  });
+
+	  $("#code-button").button().click(function(event) {
+	      copy_to_clipboard(graph_to_pstricks());
+	  });
+
+	  $("#clear-selection-button").button().click(function(event) {
+	      selected_objects = [];
+	      draw_canvas();
+	  });
+
 
 	  $("#vertex-dialog").dialog({
 	      autoOpen: false,
@@ -977,6 +1001,9 @@
 	      }
 	  });
 
+	  // Need to call this after the buttons are initialized
+	  init_canvas("#myCanvas");
+
 	  // When user presses enter inside a dialog, it should be equivalent to clicking
 	  // the first button of the dialog.
 	  $(document).delegate('.ui-dialog', 'keydown', function(e) {
@@ -995,6 +1022,7 @@
 	      // reflect the actual width and height of the html element.  Otherwise
 	      // the canvas pixel space will be scaled to fit.
 	      var name = "#myCanvas";
+	      $("#canvas-div").height($(window).height() - $("#toolbar").outerHeight(true) - $("body").offset().top);
 	      var canvas = $(name)[0];
 	      canvas.width = $(name).width();
 	      canvas.height = $(name).height();
