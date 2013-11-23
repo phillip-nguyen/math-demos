@@ -181,12 +181,10 @@
 
       function init_canvas(name) {
 	  var canvas = $(name)[0];
-	  canvas.width = ""+$(name).width();
-	  canvas.height = ""+$(name).height();
+	  canvas.width = $(name).width();
+	  canvas.height = $(name).height();
 	  var ctx = canvas.getContext("2d");
 	  	  
-	  //ctx.translate(0.5, 0.5);
-
 	  canvas.addEventListener("mousedown", touchStart);
 	  canvas.addEventListener("touchstart", touchStart);
 
@@ -990,6 +988,18 @@
 		  $(this).find('.ui-dialog-buttonset button').eq(0).trigger('click');
 		  return false;
 	      }
+	  });
+
+	  $(window).resize(function(event) {
+	      // Need to update the canvas object so that its width and height
+	      // reflect the actual width and height of the html element.  Otherwise
+	      // the canvas pixel space will be scaled to fit.
+	      var name = "#myCanvas";
+	      var canvas = $(name)[0];
+	      canvas.width = $(name).width();
+	      canvas.height = $(name).height();
+	      // Must redraw the canvas, since setting width and height clears it.
+	      draw_canvas();
 	  });
 
 	  $(window).keydown(function(event) {
