@@ -37,6 +37,11 @@
           margin: 3px auto;
           position: relative;
       }
+      #code-textarea {
+          resize: none;
+          font-family: "Lucida Console", Monaco, monospace !important;
+          font-size: 11px;
+      }
     </style>
     <script type="text/javascript">
       "use strict";
@@ -705,7 +710,7 @@
       function graph_to_pstricks() {
 	  var canvas = $("#myCanvas")[0];
 	  var w = 10, h = w * canvas.height / canvas.width;
-	  var code = "\\begin{pspicture}(0,0)("+w+","+h+")\n";
+	  var code = "\\begin{pspicture}(0,0)("+w.toFixed(1)+","+h.toFixed(1)+")\n";
 	  code += "\\newcommand{\\vertex}[2]{\\cnodeput[framesep=2pt,shadow=true](#1){#2}{\\textsf{\\footnotesize#2}}}\n";
 	  _.each(theGraph.vertices, function(v) {
 	      code += vertex_to_pstricks(v) + "\n";
@@ -927,6 +932,7 @@
 
     <div id="toolbar">
       <button id="code-button">Display LaTeX/PSTricks code</button>
+      <button id="straighten-button">Straighten selected edges</button>
       <button id="clear-selection-button">Clear selection</button>
       <button id="delete-button">Delete selected objects</button>
     </div>
@@ -941,6 +947,10 @@
       <input type="text" name="edge-cost" id="edge-cost" class="text ui-widget-content ui-corner-all"/>
     </div>
 
+    <div id="code-dialog" title="LaTeX/PSTricks Code">
+      <textarea id="code-textarea" rows="11" cols="80" wrap="off" readonly="true"></textarea>
+    </div>
+
     <script type="text/javascript">
       $(function() {
 	  $("#delete-button").button().click(function(event) {
@@ -948,7 +958,7 @@
 	  });
 
 	  $("#code-button").button().click(function(event) {
-	      copy_to_clipboard(graph_to_pstricks());
+	      $("#code-dialog").dialog("open");
 	  });
 
 	  $("#clear-selection-button").button().click(function(event) {
@@ -956,6 +966,14 @@
 	      draw_canvas();
 	  });
 
+	  $("#straighten-button").button().click(function(event) {
+	      _.each(selected_objects, function(e) {
+		  if (e.v1) {
+		      make_straight_edge(e);
+		  }
+	      });
+	      draw_canvas();
+	  });
 
 	  $("#vertex-dialog").dialog({
 	      autoOpen: false,
@@ -1001,6 +1019,23 @@
 	      }
 	  });
 
+	  $("#code-dialog").dialog({
+	      autoOpen: false,
+	      height: 300,
+	      width: $("#code-textarea").outerWidth(true)+25,
+	      modal: true,
+	      open: function() {
+		  $("#code-textarea")
+		      .val(graph_to_pstricks())
+		      .select();
+	      },
+	      buttons: {
+		  "OK": function() {
+		      $(this).dialog("close");
+		  }
+	      }
+	  });
+
 	  // Need to call this after the buttons are initialized
 	  init_canvas("#myCanvas");
 
@@ -1030,25 +1065,6 @@
 	      draw_canvas();
 	  });
 
-	  $(window).keydown(function(event) {
-	      var keycode = event.keyCode || event.which;
-	      if (keycode === 80) { // pressed "P"
-		  copy_to_clipboard(graph_to_pstricks());
-	      } else if (keycode === 8 || keycode === 46) {
-		  if (!$("#vertex-dialog").dialog("isOpen")) {
-		      delete_selected_objects();
-		  }
-	      } else if (keycode === 27) {
-		  selected_objects = [];
-		  draw_canvas();
-	      } else if (keycode === 83) { // pressed "S"
-		  _.each(selected_objects, function(e) {
-		      if (e.v1) {
-			  make_straight_edge(e);
-		      }
-		  });
-	      }
-	  });
       });
     </script>
 
