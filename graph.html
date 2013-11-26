@@ -594,6 +594,7 @@
       function new_vertex(x, y) {
 	  var vertex = { x: x, y: y};
 	  theGraph.vertices.push(vertex);
+	  resetHamiltonianCircuits();
 	  vertex.name = get_unique_vertex_name();
 	  return vertex;
       }	  
@@ -622,9 +623,16 @@
 	  var edge = { v1: v1, v2: v2, cp: midpoint(v1, v2), 
 		       cp_dist: 0, cp_ratio: 0.5, straight: true };
 	  theGraph.edges.push(edge);
+	  resetHamiltonianCircuits();
 	  return edge;
       }
       
+      function resetHamiltonianCircuits() {
+	  delete theGraph.hamiltonianCircuits;
+	  delete theGraph.hamiltonIndex;
+	  $("#hamilton-button").button("option", "label", "Find Hamilton Circuits");
+      }
+
       // Forces the edge e to be a straight line.
       function make_straight_edge(e) {
 	  e.cp = midpoint(e.v1, e.v2);
@@ -733,6 +741,7 @@
       // Removes the currently selected edge and vertex (if any) from the graph.
       // If a vertex is removed, all the edges connected to it are also removed.
       function delete_selected_objects() {
+	  if (selected_objects.length === 0) return;
 	  _.each(selected_objects, function(x) {
 	      if (x.v1) {
 		  theGraph.edges = _.without(theGraph.edges, x);
@@ -742,6 +751,7 @@
 	      }
 	  });
 	  selected_objects = [];
+	  resetHamiltonianCircuits();
 	  draw_canvas();
       }
 
@@ -792,6 +802,72 @@
       // Returns the distance between two vertices.
       function distance(v1, v2) {
 	  return Math.sqrt( (v2.x-v1.x)*(v2.x-v1.x) + (v2.y-v1.y)*(v2.y-v1.y) );
+      }
+
+      function findHamiltonianCircuits(graph) {
+	  var startVertex = graph.vertices[0];
+	  var queue = [ [startVertex] ];
+	  var solutions = [];
+	  var solutionPathLength = graph.vertices.length * 2 + 1;
+	  
+	  // Temporarily add an connections property to every vertex in the graph
+	  // which contains a list of all [edge, destVertex] connected to that vertex.
+	  _.each(graph.vertices, function(v) { v.connections = []; });
+	  _.each(graph.edges, function(e) {
+	      e.v1.connections.push([e, e.v2]);
+	      e.v2.connections.push([e, e.v1]);
+	  });
+	  
+	  function expandPath(path, queue) {
+	      // pushes the new paths directly onto the passed-in queue.
+	      var lastVertex = _.last(path);
+	      if (path.length != 1 && lastVertex === startVertex) return [];
+	      _.each(lastVertex.connections, function(ev) {
+		  var connectedVertex = ev[1];
+		  //console.log(_.pluck(ev, 'name'));
+		  if (connectedVertex === startVertex || !_.contains(path, connectedVertex)) {
+		      queue.push(path.concat(ev));
+		  }
+	      });
+	  }
+	  
+	  while (queue.length > 0) {
+	      var path = queue.pop();
+	      if (path.length === solutionPathLength && _.last(path) === startVertex) {
+		  solutions.push(path);
+	      } else {
+		  expandPath(path, queue);
+	      }
+	  }
+	  
+	  // Remove the temporary edges property from vertices.
+	  _.each(graph.vertices, function(v) { delete v.connections; });
+	  
+	  function areReflections(p, q) {
+	      if (p.length !== q.length) return false;
+	      for (var i = 0, len = p.length; i < len; i++) {
+		  if (p[i] !== q[len-i-1]) return false;
+	      }
+	      return true;
+	  }
+
+	  function removeReflections(paths) {
+	      if (paths.length === 0) return [];
+	      var unique = [];
+	      _.each(paths, function(p) {
+		  var mirror = _.find(unique, function(q) {
+		      return areReflections(p, q);
+		  });
+		  if (!mirror) unique.push(p);
+	      });
+	      return unique;
+	  }
+	  
+	  solutions = removeReflections(solutions);
+	  
+	  _.each(solutions, function(x) { console.log(_.compact(_.pluck(x, 'name'))); });
+
+	  return solutions;
       }
 
       function draw_vertex(v, ctx) {
@@ -865,14 +941,33 @@
 	      ctx.stroke();
 	  }
 
+	  // Draw the currently displayed hamiltonian circuit if there is one.
+	  if (theGraph.hamiltonianCircuits) {
+	      ctx.lineWidth = 4;
+	      ctx.shadowColor = "#00BFFF";
+	      ctx.shadowBlur = 10;
+	      ctx.shadowOffsetX = 0;
+	      ctx.shadowOffsetY = 0;
+	      var circuit = theGraph.hamiltonianCircuits[theGraph.hamiltonIndex];
+	      _.each(circuit, function(e) {
+		  if (e.v1) {
+		      ctx.beginPath();
+		      ctx.moveTo(e.v1.x, e.v1.y);
+		      ctx.quadraticCurveTo(e.cp.x, e.cp.y, e.v2.x, e.v2.y);
+		      ctx.strokeStyle = "#00BFFF";
+		      ctx.stroke();
+		      ctx.stroke();
+		  }
+	      });
+	      ctx.shadowColor = "transparent";
+	  }
+
 	  // Draw the edges.
 	  ctx.lineWidth = 4;
 	  _.each(theGraph.edges, function(e) {
 	      ctx.beginPath();
 	      ctx.moveTo(e.v1.x, e.v1.y);
 	      ctx.quadraticCurveTo(e.cp.x, e.cp.y, e.v2.x, e.v2.y);
-	      // BUG: the edges in selected objects aren't really edges,
-	      // so need to do some other kind of test here.
 	      ctx.strokeStyle = (_.contains(selected_objects, e)) ? "#f00" : "#000";
 	      ctx.stroke();
 	  });
@@ -881,7 +976,7 @@
 	  ctx.fillStyle = "#000";
 	  ctx.strokeStyle = "rgba(255,255,255,0.9)";
 	  ctx.linewidth = 1;
-	  ctx.font = "bold 18px sans-serif";
+	  ctx.font = "bold 20px sans-serif";
 	  ctx.textBaseline = "middle";
 	  ctx.textAlign = "center"
 	  _.each(theGraph.edges, function(e) {
@@ -938,6 +1033,7 @@
       <button id="straighten-button">Straighten selected edges</button>
       <button id="clear-selection-button">Clear selection</button>
       <button id="delete-button">Delete selected objects</button>
+      <button id="hamilton-button">Find Hamilton Circuits</button>
     </div>
 
     <div id="vertex-dialog" title="Edit vertex">
@@ -951,12 +1047,13 @@
     </div>
 
     <div id="code-dialog" title="LaTeX/PSTricks Code">
-      <textarea id="code-textarea" rows="11" cols="80" wrap="off" 
+      <textarea id="code-textarea" rows="12" cols="80" wrap="off" 
 		onkeydown="event.preventDefault();event.stopPropagation();return false;"
 		oncut="event.preventDefault();event.stopPropagation();return false;"></textarea>
     </div>
 
     <script type="text/javascript">
+      "use strict";
       $(function() {
 	  $("#delete-button").button().click(function(event) {
 	      delete_selected_objects();
@@ -978,6 +1075,34 @@
 		  }
 	      });
 	      draw_canvas();
+	  });
+
+	  function showHamiltonianCircuit() {
+	      //selected_objects = theGraph.hamiltonianCircuits[theGraph.hamiltonIndex];		  
+	      $("#hamilton-button").button("option", "label", 
+					   "Next Circuit (" + 
+					   (theGraph.hamiltonIndex+1) + 
+					   " of " + theGraph.hamiltonianCircuits.length + ")");
+	      draw_canvas();
+	  }
+
+	  $("#hamilton-button").button().click(function(event) {
+	      if (theGraph.hamiltonianCircuits) {
+		  if (theGraph.hamiltonianCircuits.length > 0) {
+		      theGraph.hamiltonIndex = (theGraph.hamiltonIndex + 1) % theGraph.hamiltonianCircuits.length;
+		      showHamiltonianCircuit();
+		  }
+	      } else {
+		  theGraph.hamiltonianCircuits = findHamiltonianCircuits(theGraph);
+		  if (theGraph.hamiltonianCircuits.length > 0) {
+		      theGraph.hamiltonIndex = 0;
+		      showHamiltonianCircuit();
+		  } else {
+		      $("#hamilton-button").button("option", "label", "No Hamilton Circuits");
+		      //selected_objects = [];
+		      draw_canvas();
+		  }
+	      }
 	  });
 
 	  $("#vertex-dialog").dialog({
