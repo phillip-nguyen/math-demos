@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>The Normal Distribution</title>
+    <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.10.1/jquery.min.js"></script>
+    <script src="http://cdnjs.cloudflare.com/ajax/libs/underscore.js/1.5.2/underscore-min.js"></script>
+    <script src="touchhandler.js"></script>
+    <style>
+      html, body { height: 99%; padding: 0px; margin: 2px;}
+      #canvas-div {
+	  width: 100%;
+	  position: relative;
+	  margin: 0 auto;
+      }
+      .canvas { 
+	  width: 100%;
+	  height: 100%;
+	  border: none;
+	  margin: 0 auto;
+          padding: 0px;
+	  position: absolute;
+	  left: 0;
+	  top: 0;
+      }
+      #toolbar {
+          width: 100%;
+          padding: 0px;
+          margin: 3px auto;
+          position: relative;
+      }
+    </style>
+    <script type="text/javascript">
+      "use strict";
+
+      var zCursor = 1;
+      var geometry = {}; 
+
+      function init_canvas(name) {
+	  var canvas = $(name)[0];
+
+	  resize_canvas(name);
+
+	  enableTouchEvents(canvas);
+	  canvas.press = canvas_press;
+	  canvas.drag = canvas_drag;
+	  canvas.endPress = canvas_endPress;
+      }
+
+      function resize_canvas(name) {
+	  $("#canvas-div").height($(window).height() - $("body").offset().top - 10);	 //- $("#toolbar").outerHeight(true)
+	  var canvas = $(name)[0];
+	  geometry.width = canvas.width = $(name).width();
+	  geometry.height = canvas.height = $(name).height();
+
+	  canvas_setViewport(canvas, -4.5, -1.5, 4.5, 4);
+      }
+
+      function canvas_setViewport(canvas, x1, y1, x2, y2) {
+	  var ctx = canvas.getContext("2d");
+	  var xscale = geometry.width / (x2 - x1);
+	  var yscale = geometry.height / (y2 - y1);
+	  geometry.scale = Math.min(xscale, yscale);
+	  geometry.xmid = (x1 + x2) / 2;
+	  geometry.ymid = (y1 + y2) / 2;
+	  ctx.lineWidth = 4/geometry.scale;
+	  ctx.setTransform(geometry.scale, 0, 0, -geometry.scale, geometry.width/2, geometry.height/2);
+	  ctx.translate(-geometry.xmid, -geometry.ymid);
+	  
+      }
+
+      function unprojectXY(x, y) {
+	  return {x: (x + geometry.xmid)*geometry.scale + geometry.width/2,
+		  y: (-y + geometry.ymid)*geometry.scale + geometry.height/2};
+      }
+
+      function projectXY(x, y) {
+	  return {x: (x - geometry.width/2) / geometry.scale - geometry.xmid,
+		  y: (-y + geometry.height/2) / geometry.scale + geometry.ymid};
+      }
+
+      var holdingCursor = false;
+
+      function canvas_press(event) {
+	  var x = event.pageX-$("#myCanvas").offset().left;
+	  var y = event.pageY-$("#myCanvas").offset().top;
+	  var p = projectXY(x, y);
+	  if (nearCursor(p.x, p.y)) {
+	      holdingCursor = {dx: zCursor - p.x};
+	      draw_canvas();
+	  }
+      }      
+
+      function canvas_drag(event) {
+	  var x = event.pageX-$("#myCanvas").offset().left;
+	  var y = event.pageY-$("#myCanvas").offset().top;
+	  var p = projectXY(x, y);	  
+	  if (holdingCursor) {
+	      zCursor = roundToNearestThousandths(p.x + holdingCursor.dx);
+	      draw_canvas();
+	  }
+      }
+
+      function roundToNearestThousandths(x) {
+	  return Math.round(1000*(x + 1e-15))/1000;
+      }
+
+      function canvas_endPress(event) {
+	  if (holdingCursor) {
+	      holdingCursor = false;
+	      zCursor = roundToNearestThousandths(zCursor);
+	      draw_canvas();
+	  }
+      }
+
+      function nearCursor(x, y) {
+	  return (Math.abs(x - zCursor) < 0.18 && Math.abs(y + 0.1) < 0.13);
+      }
+
+      function gaussian(x) {
+	  return 1/Math.sqrt(2*Math.PI)*Math.exp(-x*x/2);
+      }
+
+      // Uses the composite Simpson's rule in order to
+      // evaluate the integral of f on the interval from a to b
+      // using n subintervals, where n is an even number.
+      function simpson(f, a, b, n) {
+	  var h = (b - a) / n;
+	  var s = f(a) + f(b);
+	  for (var i = 1; i < n; i += 2) {
+	      s += 4*f(a + i*h);
+	  }
+	  for (var i = 2; i < n - 1; i += 2) {
+	      s += 2*f(a + i*h);
+	  }
+	  return s*h/3;
+      }
+
+      var percentile = _.memoize(function(z) {
+	  return 0.5 + simpson(gaussian, 0, z, 20);
+      });
+
+      function draw_canvas() {
+	  var canvas = $("#myCanvas")[0];
+	  var ctx = canvas.getContext("2d");
+
+	  clear_canvas();
+
+	  var x1 = -4.5, x2 = 4.5;
+	  var dx = 9/1000;
+
+	  var f = function(x) { return 8*gaussian(x); };
+
+	  // Fill in the background of the bell curve
+	  // up to the current z score.
+	  ctx.fillStyle = "red";
+	  ctx.beginPath();
+	  ctx.moveTo(x1, f(x1));
+	  for (var x = x1; x <= zCursor; x += dx) {
+	      ctx.lineTo(x, f(x));
+	  }
+	  ctx.lineTo(zCursor, f(zCursor));
+	  ctx.lineTo(zCursor, 0);
+	  ctx.fill();
+
+	  // Draw the x-axis.
+	  ctx.strokeStyle = "black";
+	  ctx.beginPath();
+	  ctx.moveTo(-20,0);
+	  ctx.lineTo(20,0);
+	  ctx.stroke();
+
+	  // Draw tick marks.
+	  ctx.beginPath();
+	  for (var x = -6; x <= 6; x++) {
+	      ctx.moveTo(x, -0.05);
+	      ctx.lineTo(x, 0.05);
+	  }
+	  ctx.stroke();
+
+	  // Draw the bell curve outline.
+	  ctx.strokeStyle = "black";
+	  ctx.beginPath();
+	  ctx.moveTo(x1, f(x1));
+	  for (var x = x1; x <= x2; x += dx) {
+	      ctx.lineTo(x, f(x));
+	  }
+	  ctx.lineTo(x2, f(x2));
+	  ctx.moveTo(zCursor, 0);
+	  ctx.lineTo(zCursor, f(zCursor));
+	  ctx.stroke();
+
+	  // Draw a dot at the current z score location.
+	  ctx.fillStyle = holdingCursor ? "orange" : "yellow";
+	  //ctx.beginPath();
+	  //ctx.arc(zCursor, 0, 3*ctx.lineWidth, 0, 6.28319, false);
+	  //ctx.fill();
+	  //ctx.stroke();
+
+	  // Draw an arrow at the current z score location.
+	  ctx.beginPath();
+	  ctx.moveTo(zCursor, 0);
+	  ctx.lineTo(zCursor+0.15, -0.2);
+	  ctx.lineTo(zCursor-0.15, -0.2);
+	  ctx.lineTo(zCursor, 0);
+	  ctx.fill();
+	  ctx.stroke();
+
+	  // And label the current z.
+	  ctx.fillStyle = "black";
+	  ctx.font = "bold 32px sans-serif";
+	  ctx.textBaseline = "middle";
+	  //ctx.textAlign = "center"
+	  ctx.save();
+	  ctx.setTransform(1, 0, 0, 1, 0, 0);
+	  var z = roundToNearestThousandths(zCursor);
+	  var p = unprojectXY(z, -0.4);
+	  var zText = (z < 0) ? "\u2212"+(-z).toFixed(3) : z.toFixed(3);
+	  ctx.fillText("z = " + zText, p.x, p.y);
+
+	  // Show the current percentile.
+	  ctx.fillText("p = " + roundToNearestThousandths(100*percentile(z)).toFixed(3) + "%", p.x, p.y + 30);
+	  
+	  ctx.restore();
+
+      }
+
+      function clear_canvas() {
+	  var canvas = $("#myCanvas")[0];
+	  var ctx = canvas.getContext("2d");
+	  ctx.save();
+	  ctx.setTransform(1, 0, 0, 1, 0, 0);
+	  ctx.clearRect(0, 0, geometry.width, geometry.height);
+	  ctx.restore();
+      }
+
+    </script>
+  </head>
+  <body>
+        
+    <div id="canvas-div">
+      <canvas class="canvas" id="myCanvas"></canvas>
+    </div>
+
+    <div id="toolbar">
+    </div>
+
+    <script type="text/javascript">
+      "use strict";
+      $(function() {
+
+	  init_canvas("#myCanvas");
+	  draw_canvas();
+
+	  $(window).resize(function(event) {
+	      // Need to update the canvas object so that its width and height
+	      // reflect the actual width and height of the html element.  Otherwise
+	      // the canvas pixel space will be scaled to fit.
+	      resize_canvas("#myCanvas");
+	      // Must redraw the canvas, since setting width and height clears it.
+	      draw_canvas();
+	  });
+
+      });
+    </script>
+
+  </body>
+</html>
