@@ -364,6 +364,13 @@
 	  } else {
 	      $('body').css('cursor', 'default');
 	  }	  
+
+	  /* // DEBUG
+	  near_points = _.map(theGraph.edges, function(e) {
+	      return quadratic_bezier_near_point(e.v1, e.cp, e.v2, {x: x, y: y});
+	  });
+	  draw_canvas();
+	  */ 
       }
 
       function canvas_endPress(event) {
@@ -402,73 +409,6 @@
 	  var c = t*t;
 	  return {x: a*p0.x + b*p1.x + c*p2.x,
 		  y: a*p0.y + b*p1.y + c*p2.y};
-      }
-
-      function mouse_moved(event) {
-	  var x = event.pageX-$("#myCanvas").offset().left;
-	  var y = event.pageY-$("#myCanvas").offset().top;
-	  // While waiting for a long click, make sure that the mouse does not
-	  // move too far away from the initial click point.
-	  if (long_click.valid) {
-	      if (Math.abs(long_click.x - x) + Math.abs(long_click.y - y) > 12) {
-		  long_click.valid = false;
-	      }
-	  }
-	  
-	  // If there is a held vertex, then it will move with 
-	  // the mouse.
-	  if (held_vertex) {
-	      move_vertex(held_vertex.vertex, x + held_vertex.dx, y + held_vertex.dy);
-	      draw_canvas();
-	      return;
-	  }
-
-	  // If there is a held edge, then it will bend as the mouse moves.
-	  if (held_edge) {
-	      var point = held_edge.point;
-	      point.x = x + held_edge.dx;
-	      point.y = y + held_edge.dy;
-	      var edge = held_edge.edge;
-	      edge.cp = find_bezier_control_point(edge.v1, edge.v2, point, point.t);
-	      compute_cp_info(edge);
-	      var angle1 = compute_angle_from_points(edge.v1, edge.v2, edge.cp) * 180 / Math.PI;
-	      var angle2 = compute_angle_from_points(edge.v2, edge.v1, edge.cp) * 180 / Math.PI;
-	      if (Math.abs(angle1) < 0.5 && Math.abs(angle2) < 0.5) {
-		  make_straight_edge(edge);
-	      } else {
-		  edge.straight = false;
-	      }
-	      draw_canvas();
-	      return;
-	  }
-
-	  // Highlight any vertex that the mouse is hovering over.
-	  var v = find_vertex(x, y);
-	  if (v !== hover_vertex) {
-	      hover_vertex = v;
-	      draw_canvas();
-	  }
-
-	  // Update the end-coordinates of the nascent edge.
-	  if (nascent_edge) {
-	      nascent_edge.v2 = {x: x, y: y};
-	      draw_canvas();
-	      return;
-	  }
-
-	  var hover_edge = find_edge(x, y);
-	  if (hover_edge) {
-	      $('body').css('cursor', 'pointer');
-	  } else {
-	      $('body').css('cursor', 'default');
-	  }	  
-
-	  /* // DEBUG
-	  near_points = _.map(theGraph.edges, function(e) {
-	      return quadratic_bezier_near_point(e.v1, e.cp, e.v2, {x: x, y: y});
-	  });
-	  draw_canvas();
-	  */ 
       }
 
       // Moves vertex v to a new location, adjusting all connected edges.
