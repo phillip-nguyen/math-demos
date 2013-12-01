@@ -8,7 +8,7 @@
     <script src="http://ajax.googleapis.com/ajax/libs/jqueryui/1.10.3/jquery-ui.min.js"></script>
     <script src="http://cdnjs.cloudflare.com/ajax/libs/underscore.js/1.5.2/underscore-min.js"></script>
     <script src="touchhandler.js"></script>
-    <style>
+    <style type="text/css">
       html, body { height: 99%; padding: 0px; margin: 5px;}
       .ui-widget { font-size: 12px; }
       .ui-dialog-buttonpane { 
@@ -46,6 +46,10 @@
     </style>
     <script type="text/javascript">
       "use strict";
+
+      // Javascript Graph Editor
+      // Copyright 2013 by Phillip Nguyen.
+      // All rights reserved.
 
       var theGraph = { vertices: [], edges: [] }
 
@@ -903,6 +907,7 @@
 
     <script type="text/javascript">
       "use strict";
+
       $(function() {
 	  $("#delete-button").button().click(function(event) {
 	      delete_selected_objects();

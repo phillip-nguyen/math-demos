@@ -6,7 +6,7 @@
     <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.10.1/jquery.min.js"></script>
     <script src="http://cdnjs.cloudflare.com/ajax/libs/underscore.js/1.5.2/underscore-min.js"></script>
     <script src="touchhandler.js"></script>
-    <style>
+    <style type="text/css">
       html, body { height: 99%; padding: 0px; margin: 2px;}
       #canvas-div {
 	  width: 100%;
@@ -33,6 +33,10 @@
     <script type="text/javascript">
       "use strict";
 
+      // Javascript Normal Distribution Demonstration
+      // Copyright 2013 by Phillip Nguyen.
+      // All rights reserved.
+
       var zCursor = 1;
       var geometry = {}; 
 
@@ -56,6 +60,10 @@
 	  canvas_setViewport(canvas, -4.5, -1.5, 4.5, 4);
       }
 
+      // Calculates the proper canvas transformation so that the rectangle
+      // defined by (x1,y1) and (x2,y2) spans the canvas.  Also flips the
+      // y-coordinates so that positive y is up.  The various geometry 
+      // computations are stored in the global geometry object.
       function canvas_setViewport(canvas, x1, y1, x2, y2) {
 	  var ctx = canvas.getContext("2d");
 	  var xscale = geometry.width / (x2 - x1);
@@ -63,17 +71,24 @@
 	  geometry.scale = Math.min(xscale, yscale);
 	  geometry.xmid = (x1 + x2) / 2;
 	  geometry.ymid = (y1 + y2) / 2;
-	  ctx.lineWidth = 4/geometry.scale;
+	  geometry.baseLineWidth = 1/geometry.scale;
+	  ctx.lineWidth = 4*geometry.baseLineWidth;
 	  ctx.setTransform(geometry.scale, 0, 0, -geometry.scale, geometry.width/2, geometry.height/2);
 	  ctx.translate(-geometry.xmid, -geometry.ymid);
 	  
       }
 
+      // NOTE: The following two functions would really benefit from clearer names.
+
+      // Takes an (x,y) in the canvas context's transformed coordinate system
+      // and converts it to the window's pixel space.
       function unprojectXY(x, y) {
 	  return {x: (x + geometry.xmid)*geometry.scale + geometry.width/2,
 		  y: (-y + geometry.ymid)*geometry.scale + geometry.height/2};
       }
 
+      // Takes an (x,y) in the window's pixel space, and converts it into 
+      // coordinates in the canvas context's transformed coordinate system.
       function projectXY(x, y) {
 	  return {x: (x - geometry.width/2) / geometry.scale - geometry.xmid,
 		  y: (-y + geometry.height/2) / geometry.scale + geometry.ymid};
@@ -113,6 +128,7 @@
 	  }
       }
 
+      // Returns true if (x,y) is located near the current zCursor location.
       function nearCursor(x, y) {
 	  return (Math.abs(x - zCursor) < 0.18 && Math.abs(y + 0.1) < 0.13);
       }
@@ -126,14 +142,14 @@
       // using n subintervals, where n is an even number.
       function simpson(f, a, b, n) {
 	  var h = (b - a) / n;
-	  var s = f(a) + f(b);
+	  var sum = f(a) + f(b);
 	  for (var i = 1; i < n; i += 2) {
-	      s += 4*f(a + i*h);
+	      sum += 4*f(a + i*h);
 	  }
 	  for (var i = 2; i < n - 1; i += 2) {
-	      s += 2*f(a + i*h);
+	      sum += 2*f(a + i*h);
 	  }
-	  return s*h/3;
+	  return sum*h/3;
       }
 
       var percentile = _.memoize(function(z) {
@@ -190,14 +206,8 @@
 	  ctx.lineTo(zCursor, f(zCursor));
 	  ctx.stroke();
 
-	  // Draw a dot at the current z score location.
-	  ctx.fillStyle = holdingCursor ? "orange" : "yellow";
-	  //ctx.beginPath();
-	  //ctx.arc(zCursor, 0, 3*ctx.lineWidth, 0, 6.28319, false);
-	  //ctx.fill();
-	  //ctx.stroke();
-
 	  // Draw an arrow at the current z score location.
+	  ctx.fillStyle = holdingCursor ? "orange" : "yellow";
 	  ctx.beginPath();
 	  ctx.moveTo(zCursor, 0);
 	  ctx.lineTo(zCursor+0.15, -0.2);
@@ -206,23 +216,19 @@
 	  ctx.fill();
 	  ctx.stroke();
 
-	  // And label the current z.
+	  // Label the current z-score at cursor location.
 	  ctx.fillStyle = "black";
 	  ctx.font = "bold 32px sans-serif";
 	  ctx.textBaseline = "middle";
-	  //ctx.textAlign = "center"
 	  ctx.save();
 	  ctx.setTransform(1, 0, 0, 1, 0, 0);
 	  var z = roundToNearestThousandths(zCursor);
 	  var p = unprojectXY(z, -0.4);
 	  var zText = (z < 0) ? "\u2212"+(-z).toFixed(3) : z.toFixed(3);
 	  ctx.fillText("z = " + zText, p.x, p.y);
-
-	  // Show the current percentile.
+	  // Also show the current percentile value.
 	  ctx.fillText("p = " + roundToNearestThousandths(100*percentile(z)).toFixed(3) + "%", p.x, p.y + 30);
-	  
 	  ctx.restore();
-
       }
 
       function clear_canvas() {
