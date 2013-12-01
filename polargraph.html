@@ -160,7 +160,7 @@
 	  var canvas = $("#graph2")[0];
 	  var ctx = canvas.getContext("2d");
 	  var deg_to_rad = Math.PI/180.0;
-	  var r, t, incr = 0.001;
+	  var r, prevR, t, incr = 0.001;
 	  var tmin = parseFloat($("#tmin").val());
 	  var tmax = parseFloat($("#tmax").val());
 	  var x, y;
@@ -178,7 +178,7 @@
 
 	  ctx.beginPath();
 	  // Move to first point.
-	  r = f(tmin);
+	  r = prevR = f(tmin);
 	  x = r*Math.cos(tmin);
 	  y = r*Math.sin(tmin);
 	  ctx.moveTo(x, y);
@@ -187,13 +187,21 @@
 	      r = f(t);
 	      x = r*Math.cos(t);
 	      y = r*Math.sin(t);
-	      ctx.lineTo(x, y);
+	      // Try to avoid connecting asymptotic points.
+	      if (prevR > 10 && r < 10 || prevR < 10 && r > 10) {
+		  ctx.moveTo(x, y);
+	      } else {
+		  ctx.lineTo(x, y);
+	      }
+	      prevR = r;
 	  }
 	  // Plot last point.
 	  r = f(tmax);
 	  x = r*Math.cos(tmax);
 	  y = r*Math.sin(tmax);
-	  ctx.moveTo(x, y);
+	  if (prevR > 10 && r < 10 || prevR < 10 && r > 10) {
+	      ctx.lineTo(x, y);
+	  }
 	  // Stroke everything.
 	  ctx.stroke();
 
