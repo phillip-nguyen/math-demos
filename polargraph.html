@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <style type="text/css">
+      html, body { height: 95%; }
+      .Large { font-size: 150%; }
+      .author { 
+	  font-size: 24px; 
+	  margin-left: 2.5%; 
+	  color: transparent; 
+	  -webkit-transition: all 0.5s ease-in-out;
+	  -moz-transition: all 0.5s ease-in-out;
+	  -ms-transition: all 0.5s ease-in-out;
+	  -o-transition: all 0.5s ease-in-out;
+	  -webkit-touch-callout: none;
+	  -webkit-user-select: none;
+	  -khtml-user-select: none;
+	  -moz-user-select: none;
+	  -ms-user-select: none;
+	  user-select: none;
+      }
+      .author:hover {
+	  color: rgb(100,100,255);
+      }
+      #header_div {
+	  width: 900px;
+	  margin: 0 auto;
+	  overflow: auto;
+      }
+      #function_div {
+	  margin: 20px;
+	  float: left;
+      }
+      #interval_div {
+	  width: auto;
+	  margin: 35px 0px 0px 0px; 
+	  float: left;
+      }
+      .interval {
+	  width: 100px;
+	  height: 32px;
+	  font-size: 24px;
+	  padding: 2px;
+	  text-align: center;
+	  /*border: 1px dashed #dddddd;*/
+      }
+      #function {
+	  /*
+	  -webkit-transition: all 0.10s ease-in-out;
+	  -mozkit-transition: all 0.10s ease-in-out;
+	  -ms-transition: all 0.10s ease-in-out;
+	  -o-transition: all 0.10s ease-in-out;
+	  outline: none;*/
+	  width: 400px;
+	  height: 48px;
+	  font-size: 32px;
+	  /*
+	  border: 2px solid #33ccff;
+	  border-style: dashed;
+	  border-radius: 20px;*/
+	  padding: 5px;
+      }
+      /*
+      #function:focus {
+	  box-shadow: 0 0 10px rgba(81, 203, 238, 1);
+	  padding: 5px;
+	  border: 2px solid rgba(81, 203, 238, 1);
+	  border-style: dashed;
+      }*/
+      #graphdiv {
+	  width: 95%;
+	  height: 95%;
+	  position: relative;
+	  margin: 0 auto;
+      }
+      .graph { 
+	  width: 100%;
+	  height: 100%;
+	  border: 0px solid gray;
+	  margin: 0px;
+	  position: absolute;
+	  left: 0;
+	  top: 0;
+      }
+      #graph1 { z-index: 0; }
+      #graph2 { z-index: 1; }
+      .subscript {
+	  position: relative;
+	  top: 0.3em;
+	  font-size: 0.8em;
+      }
+    </style>
+    <script src="http://ajax.googleapis.com/ajax/libs/jquery/2.0.0/jquery.min.js"></script>
+    <script src="calc.js"></script>
+    <script type="text/javascript">
+      "use strict";
+      // Polar graphing javascript code 
+      // Copyright 2013 Phillip Nguyen.
+      // All rights reserved.
+
+      function init_canvas(name) {
+	  var canvas = $(name)[0];
+	  canvas.width = ""+$(name).width();
+	  canvas.height = ""+$(name).height();
+	  // Fix the coordinate system so that origin is in center of canvas
+	  // with y-axis pointing up and x-axis pointing right.
+	  var ctx = canvas.getContext("2d");
+	  
+	  var min_dimension = Math.min(canvas.width, canvas.height);
+	  var scale = min_dimension / 9;
+	  
+	  //ctx.setTransform(scale, 0, 0, -scale, min_dimension / 2, min_dimension / 2);
+	  ctx.setTransform(scale, 0, 0, -scale, canvas.width/2, canvas.height/2);
+	  ctx.lineWidth=1.5/scale;
+      }
+
+      function draw_polar_grid() {
+	  var canvas = $("#graph1")[0];
+	  var ctx = canvas.getContext("2d");
+	  var deg_to_rad = Math.PI/180.0;
+	  var max_radius = 4;
+
+	  // Radial lines.
+	  ctx.beginPath();
+	  ctx.strokeStyle="gray";
+	  for (var i = 0; i < 360; i += 15) {
+	      ctx.moveTo(.1*Math.cos(deg_to_rad*i), .1*Math.sin(deg_to_rad*i));
+	      ctx.lineTo(max_radius*Math.cos(deg_to_rad*i), max_radius*Math.sin(deg_to_rad*i));
+	  }
+	  ctx.stroke();
+
+	  // Concentric circles.
+	  for (var radius = 1; radius <= max_radius; radius += 1) {
+	      ctx.beginPath();
+	      ctx.arc(0, 0, radius, 0, 2*Math.PI);
+	      ctx.stroke();
+	  }
+
+	  // X and Y axes.
+	  ctx.beginPath();
+	  ctx.strokeStyle="black";
+	  ctx.moveTo(-max_radius-.5, 0);
+	  ctx.lineTo(max_radius+.5, 0);
+	  ctx.moveTo(0, -max_radius-.5);
+	  ctx.lineTo(0, max_radius+.5);
+	  ctx.stroke();
+
+      }
+
+      function clear_graph() {
+	  var canvas = $("#graph2")[0];
+	  var ctx = canvas.getContext("2d");
+	  ctx.save();
+	  ctx.setTransform(1, 0, 0, 1, 0, 0);
+	  ctx.clearRect(0, 0, canvas.width, canvas.height);
+	  ctx.restore();
+      }
+
+      function graph_function() {
+	  var canvas = $("#graph2")[0];
+	  var ctx = canvas.getContext("2d");
+	  var deg_to_rad = Math.PI/180.0;
+	  var r, t, incr = 0.001;
+	  var tmin = parseFloat($("#tmin").val());
+	  var tmax = parseFloat($("#tmax").val());
+	  var x, y;
+	  
+	  ctx.strokeStyle="red";
+	  ctx.lineWidth=1/30;
+
+	  var f = CALC.parse($("#function").val());
+	  if (!f) {
+	      $("#function").css({'background-color': 'pink'});
+	      return;
+	  } else {
+	      $("#function").css({'background-color': 'transparent'});
+	  }
+
+	  ctx.beginPath();
+	  // Move to first point.
+	  r = f(tmin);
+	  x = r*Math.cos(tmin);
+	  y = r*Math.sin(tmin);
+	  ctx.moveTo(x, y);
+	  // Plot intermediate points.
+	  for (t = tmin; t < tmax; t += incr) {
+	      r = f(t);
+	      x = r*Math.cos(t);
+	      y = r*Math.sin(t);
+	      ctx.lineTo(x, y);
+	  }
+	  // Plot last point.
+	  r = f(tmax);
+	  x = r*Math.cos(tmax);
+	  y = r*Math.sin(tmax);
+	  ctx.moveTo(x, y);
+	  // Stroke everything.
+	  ctx.stroke();
+
+      }
+
+    </script>
+  </head>
+
+  <body>
+    <div id="header_div">
+      <div id="function_div">
+	<label id="function_label" for="function">r(t)&nbsp;=&nbsp;</label><input id="function" type="text"></input>
+      </div>
+      <div id="interval_div">
+	<label class="interval_label" for="tmin">for&nbsp;</label>
+	<input id="tmin" class="interval" type="number" value="0"></input>
+	<label class="interval_label" for="tmin">&le;&nbsp;t&nbsp;&le;</label>
+	<input id="tmax" class="interval" type="number" value="6.282"></input>
+      </div>
+    </div>
+    <div style="clear:both;"></div>
+
+    <div id="graphdiv">
+      <canvas class="graph" id="graph1"></canvas>
+      <canvas class="graph" id="graph2"></canvas>
+    </div>
+
+    <span class="author">a u t h o r : &#112;&#032;&#110;&#032;&#103;&#032;&#117;&#032;&#121;&#032;&#101;&#032;&#110;&#032;&#064;&#032;&#097;&#032;&#117;&#032;&#115;&#032;&#116;&#032;&#105;&#032;&#110;&#032;&#099;&#032;&#099;&#032;&#046;&#032;&#101;&#032;&#100;&#032;&#117;</author>
+
+    <script type="text/javascript">
+      $(function() {
+	  init_canvas("#graph1");
+	  init_canvas("#graph2");
+	  draw_polar_grid();
+	  $(window).resize(function() {
+	      init_canvas("#graph1");
+	      init_canvas("#graph2");
+	      draw_polar_grid();
+	      graph_function();
+	  });
+	  
+	  function reset_graph() {
+	      clear_graph();
+	      graph_function();
+	  }
+	      
+	  $("#function").change(reset_graph);
+	  $("#tmin").change(reset_graph);
+	  $("#tmax").change(reset_graph);
+
+	  // Set function label to same font family and size as is used for the input text.
+	  // Lucida Grande in Mac OS X Safari, but probably varies from system to system.
+	  var elt = $("#function");
+	  $("#function_label").css({"font-family": elt.css("font-family"), "font-size": elt.css("font-size")});
+	  elt = $("#tmin");
+	  $(".interval_label").css({"font-family": elt.css("font-family"), "font-size": elt.css("font-size")});
+      });	  
+    </script>
+
+  </body>
+
+
+</html>
