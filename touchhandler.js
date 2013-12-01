@@ -1,11 +1,26 @@
-// press
-// longPress
-// endPress
-// tap
-// doubleTap
-// drag
-// move
-
+// touchhandler.js
+// Copyright 2013 by Phillip Nguyen
+//
+// HOW TO USE THIS:
+// 1. Include this script: <script src="touchhandler.js"></script>
+// 2. It exposes exactly one function, enableTouchEvents.  For a given HTML element,
+//    call enableTouchEvents(element) to add all of the touch/mouse event listeners
+//    to that element.
+// 3. Then add methods to the element for the events you wish to handle.
+//    The following event names are used:
+//       press -- mouse/finger pressed down.
+//       longPress -- mouse/finger pressed in same position for long time
+//       endPress -- mouse/finger lifted up
+//       tap -- mouse/finger pressed, then quickly released.
+//       doubleTap -- mouse/finger tapped twice in quick succession
+//       drag -- mouse/finger moved after being pressed
+//       move -- mouse pointer moved (without a preceding press)
+//
+//  Example:
+//  var canvas = $("#myCanvas")[0];
+//  enableTouchEvents(canvas);
+//  canvas.doubleTap = function(event) { console.log("doubleTap"); };
+//
 function enableTouchEvents(element) {
 
     element.addEventListener("mousedown", touchStart);
@@ -25,6 +40,10 @@ function enableTouchEvents(element) {
 			 doubleTapInterval: 300,
 			 doubleTapDistanceThreshold: 30
 		       };
+
+    // Add touchHandler object as property of the element
+    // so that user can change touch settings.
+    element.touchHandler = touchHandler;
 
     function touchStart(event) {
 	var timeStamp = event.timeStamp || +new Date();
