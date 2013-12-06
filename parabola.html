@@ -21,7 +21,7 @@
       #graph1 { z-index: 0; }
       #graph2 { z-index: 1; }
       .formula {
-	  font: 40px serif;
+	  font: 36px serif;
       }
       .formula-div {
 	  text-align: left;
@@ -56,22 +56,22 @@
 	  -webkit-appearance: none;
       }
       .input { 
-	  font-size: 32px;
+	  font-size: 28px;
 	  width: 100px;
 	  text-align: center;
       }
       .medinput { 
-	  font-size: 32px;
+	  font-size: 28px;
 	  width: 200px;
 	  text-align: center;
       }
       .biginput { 
-	  font-size: 32px;
+	  font-size: 28px;
 	  width: 300px;
 	  text-align: center;
       }
       .step {
-	  font-size: 32px;
+	  font-size: 28px;
       }
       .check {
 	  display: inline-block;
@@ -291,256 +291,251 @@
 	  }
       }
 
-      function mark_correct(step) {
-	  $("#step"+step+"-grade").html('<div class="check">&#x2713;</div>');
-	  $(".ans"+step).prop('readonly', true);
-	  $(".ans"+step).css("background-color", "white");
-	  $(".ans"+step).unbind("change");
-      }
-
-      function mark_wrong(step) {
-	  $("#step"+step+"-grade").html('<div class="cross">&#x2718;</div>');
-	  $(".ans"+step).css("background-color", "pink");
-      }
-
-      function check_step1() {
-	  var ans1a = $("#ans1-a").val();
-	  var ans1b = $("#ans1-b").val();
-
-	  if (ans1a == '' || ans1b == '') {
-	      $(".ans1").css("background-color", "white");
-	      return;
-	  }
-
-	  ans1a = Number(ans1a);
-	  ans1b = Number(ans1b);
-	  var h = MATH.rat_real(the_parabola.h);
-	  var k = MATH.rat_real(the_parabola.k);
-	  if (ans1a === h && ans1b === k) {
-	      mark_correct(1);
-	      show_step2();
+      function checkStep(step) {
+	  if (isPartiallyBlankStep(step)) {
+	      unmarkWrong(step);
+	  } else if (step.checkAnswers()) {
+	      markCorrect(step);
+	      theProblem.currentStepNumber += 1;
+	      displayCurrentStep();
 	  } else {
-	      mark_wrong(1);
+	      markWrong(step);
 	  }
       }
 
-      function check_step2() {
-	  var ans2a = $("#ans2-a").val();
-	  var ans2b = $("#ans2-b").val();
-
-	  if (ans2a == '' || ans2b == '') {
-	      $(".ans2").css("background-color", "white");
-	      return;
-	  }
-
-	  ans2a = Number(ans2a);
-	  ans2b = Number(ans2b);
-	  var h = MATH.rat_real(the_parabola.h);
-	  var k = MATH.rat_real(the_parabola.k);
-	  if (ans2a === h && ans2b === k) {
-	      mark_correct(2);
-	      show_step3();
-	  } else {
-	      mark_wrong(2);
+      function displayCurrentStep() {
+	  var step = theProblem["step"+theProblem.currentStepNumber];
+	  step.display();
+	  $(".ans"+step.number).change(function() { checkStep(step); });
+	  if (step.answerIDs && step.answerIDs.length > 0) {
+	      $("#"+step.answerIDs[0]).focus();
 	  }
       }
 
-      function check_step3() {
-	  var ans3a = $("#ans3-a").val();
-	  var ans3b = $("#ans3-b").val();
-
-	  if (ans3a == '' || ans3b == '') {
-	      $(".ans3").css("background-color", "white");
-	      return;
+      function isPartiallyBlankStep(step) {
+	  for (var i = 0, len = step.answerIDs.length; i < len; i++) {
+	      var name = step.answerIDs[i];
+	      var answer = $("#"+name).val();
+	      if (answer === '') return true;
 	  }
-
-	  ans3a = Number(ans3a);
-	  ans3b = Number(ans3b);
-	  if (the_parabola.eval(ans3a) === ans3b) {
-	      mark_correct(3);
-	      show_step4();
-	  } else {
-	      mark_wrong(3);
-	  }
+	  return false;
       }
 
-      function check_step4() {
-	  var ans4a = $("#ans4-a").val();
-	  var ans4b = $("#ans4-b").val();
-
-	  if (ans4a == '' || ans4b == '') {
-	      $(".ans4").css("background-color", "white");
-	      return;
-	  }
-
-	  ans4a = Number(ans4a);
-	  ans4b = Number(ans4b);
-
-	  var x = Number($("#ans3-a").val());
-	  var y = Number($("#ans3-b").val());
-
-	  if (ans4a === y && ans4b === x) {
-	      mark_correct(4);
-	      show_step5();
-	  } else {
-	      mark_wrong(4);
-	  }
+      function unmarkWrong(step) {
+	  $(".ans"+step.number).css("background-color", "white");
       }
 
-      function check_step5() {
-	  var ans5a = $("#ans5-a").val();
-
-	  if (ans5a == '') {
-	      $(".ans5").css("background-color", "white");
-	      return;
-	  }
-
-	  var a = the_parabola.a;
-	  if (a[1] === 1) {
-	      // The leading coefficient is an integer, so we can
-	      // do a simple check against the number input.
-	      if (a[0] === Number(ans5a)) {
-		  mark_correct(5);
-		  show_step6();
-	      } else {
-		  mark_wrong(5);
-	      }
-	  } else {
-	      // The leading coefficient is a fraction, so we must
-	      // correctly parse the input into a numerator and denominator.
-	      var frac = ans5a.split("/")
-	      if (frac.length === 2 && a[0] === Number(frac[0]) && a[1] === Number(frac[1])) {
-		  mark_correct(5);
-		  show_step6();
-	      } else {
-		  mark_wrong(5);
-	      }
-	  }
+      function markCorrect(step) {
+	  $("#step"+step.number+"-grade").html('<div class="check">&#x2713;</div>');
+	  $(".ans"+step.number).prop('readonly', true);
+	  $(".ans"+step.number).css("background-color", "white");
+	  $(".ans"+step.number).unbind("change");
       }
 
-      function check_step6() {
-	  var ans6a = $("#ans6-a").val();
+      function markWrong(step) {
+	  $("#step"+step.number+"-grade").html('<div class="cross">&#x2718;</div>');
+	  $(".ans"+step.number).css("background-color", "pink");
+      }
 
-	  if (ans6a == '') {
-	      $(".ans6").css("background-color", "white");
-	      return;
-	  }
-
-	  var a = the_parabola.a;
-	  var h = MATH.rat_real(the_parabola.h);
-	  var k = MATH.rat_real(the_parabola.k);
+      var theProblem = {};
+      theProblem.step1 = {
+	  number: 1,
+	  answerIDs: ["ans1-a", "ans1-b"],
 	  
-	  if (POLY.is_simplified_vertex_form(ans6a, a, h, k)) {
-	      mark_correct(6);
-	      show_step7();
-	  } else {
-	      mark_wrong(6);
+	  display: function() {
+	      $("#walkthrough").append(
+		  '<li id="step1" class="step">'
+		      + 'The vertex of the parabola is at '
+		      + '<big>(</big><input id="ans1-a" class="input ans1" type="text" autocomplete="off" formnovalidate></input>, '
+		      + '<input id="ans1-b" class="input ans1" type="text" autocomplete="off"></input>'
+		      + '<big>)</big>'
+		      + '<span id="step1-grade"></span>'
+		      + '</li>'
+	      );
+	  },
+
+	  checkAnswers: function() {
+	      var ans1a = Number($("#ans1-a").val());
+	      var ans1b = Number($("#ans1-b").val());
+	            
+	      var h = MATH.rat_real(the_parabola.h);
+	      var k = MATH.rat_real(the_parabola.k);
+	      
+	      return (ans1a === h && ans1b === k);
 	  }
-      }
+      };
 
-      function show_step2() {
-	  $("#walkthrough").append(
-	      '<li id="step2" class="step">'
-		  + 'Write out a partial formula for the parabola in vertex form:<br>'
-		  + '<div class="formula-div">'
-		  + '<span class="formula">'
-		  + '<i>f(x)</i> = <i>a</i><big>(</big><i>x</i> &#8722; <input id="ans2-a" class="input ans2" type="text" autocomplete="off"></input><big>)</big><sup>2</sup>'
-		  + ' + <input id="ans2-b" class="input ans2" type="text" autocomplete="off"></input>'
-		  + '</span>'
-		  + ' <span id="step2-grade"></span>'
-		  + '</div>'
-		  + '</li>'
-	  );
-
-	  $(".ans2").change(check_step2);
-	  $("#ans2-a").focus();
-      }
-
-      function show_step3() {
-	  $("#walkthrough").append(
-	      '<li id="step3" class="step">'
-		  + 'Another nice point on the parabola is '
-		  + '<big>(</big><input id="ans3-a" class="input ans3" type="text" autocomplete="off"></input>, '
-		  + '<input id="ans3-b" class="input ans3" type="text" autocomplete="off"></input>'
-		  + '<big>)</big>'
-		  + ' <span id="step3-grade"></span>'
-		  + '</li>'
-	  );
-
-	  $(".ans3").change(check_step3);
-	  $("#ans3-a").focus();
-      }
-
-      function show_step4() {
-	  var h = Number($("#ans1-a").val());
-	  var k = Number($("#ans1-b").val());
-
-	  $("#walkthrough").append(
-	      '<li id="step4" class="step">'
-		  + 'Plug this other point into your partial formula:<br>'
-		  + '<div class="formula-div">'
-		  + '<span class="formula">'
-		  + '<input id="ans4-a" class="input ans4" type="text" autocomplete="off"></input> '
-		  + '= <i>a</i><big>(</big><input id="ans4-b" class="input ans4" type="text" autocomplete="off"></input> '
-		  + (h === 0 ? '' : signCharacter(-h) + ' ' + Math.abs(h))
-		  + '<big>)</big><sup>2</sup> '
-		  + (k === 0 ? '' : signCharacter(k) + ' ' + Math.abs(k))
-		  + '</span>'
-		  + ' <span id="step4-grade"></span>'
-		  + '</div>'
-		  + '</li>'
-	  );
+      theProblem.step2 = {
+	  number: 2,
+	  answerIDs: ["ans2-a", "ans2-b"],
 	  
-	  $(".ans4").change(check_step4);
-	  $("#ans4-a").focus();
-      }
+	  display: function() {
+	      $("#walkthrough").append(
+		  '<li id="step2" class="step">'
+		      + 'Write out a partial formula for the parabola in vertex form:<br>'
+		      + '<div class="formula-div">'
+		      + '<span class="formula">'
+		      + '<i>f(x)</i> = <i>a</i><big>(</big><i>x</i> &#8722; <input id="ans2-a" class="input ans2" type="text" autocomplete="off"></input><big>)</big><sup>2</sup>'
+		      + ' + <input id="ans2-b" class="input ans2" type="text" autocomplete="off"></input>'
+		      + '</span>'
+		      + ' <span id="step2-grade"></span>'
+		      + '</div>'
+		      + '</li>'
+	      );
+	  },
 
-      function show_step5() {
-	  $("#walkthrough").append(
-	      '<li id="step5" class="step">'
-		  + 'Solve the above equation for the <u>exact</u> simplified value of <i>a</i>:<br>'
-		  + '<div class="formula-div">'
-		  + '<span class="formula">'
-		  + '<i>a</i> = '
-		  + '<input id="ans5-a" class="medinput ans5" type="text" autocomplete="off"></input>'
-		  + '</span>'
-		  + ' <span id="step5-grade"></span>'
-		  + '</div>'
-		  + '</li>'
-	  );
+	  checkAnswers: function() {
+	      var ans2a = Number($("#ans2-a").val());
+	      var ans2b = Number($("#ans2-b").val());
 
-	  $(".ans5").change(check_step5);
-	  $("#ans5-a").focus();	  
-      }
+	      var h = MATH.rat_real(the_parabola.h);
+	      var k = MATH.rat_real(the_parabola.k);
+	      return (ans2a === h && ans2b === k);
+	  }
+      };
 
-      function show_step6() {
-	  $("#walkthrough").append(
-	      '<li id="step6" class="step">'
-		  + 'Write out the complete formula of the parabola in vertex form:<br>'
-		  + '(use the ^ symbol for exponents and simplify signs)<br>'
-		  + '<div class="formula-div">'
-		  + '<span class="formula"><i>f(x)</i> = '
-		  + '<input id="ans6-a" class="biginput ans6" type="text" autocomplete="off"></input>'
-		  + '</span>'
-		  + ' <span id="step6-grade"></span>'
-		  + '</div>'
-		  + '</li>'
-	  );
+      theProblem.step3 = {
+	  number: 3,
+	  answerIDs: ["ans3-a", "ans3-b"],
 
-	  $(".ans6").change(check_step6);
-	  $("#ans6-a").focus();	  
-      }
+	  display: function() {
+	      $("#walkthrough").append(
+		  '<li id="step3" class="step">'
+		      + 'Another nice point on the parabola is '
+		      + '<big>(</big><input id="ans3-a" class="input ans3" type="text" autocomplete="off"></input>, '
+		      + '<input id="ans3-b" class="input ans3" type="text" autocomplete="off"></input>'
+		      + '<big>)</big>'
+		      + ' <span id="step3-grade"></span>'
+		      + '</li>'
+	      );
+	  },
+	  
+	  checkAnswers: function() {
+	      var ans3a = Number($("#ans3-a").val());
+	      var ans3b = Number($("#ans3-b").val());
+	      return (the_parabola.eval(ans3a) === ans3b);
+	  }
+      };
 
-      function show_step7() {
-	  $("#ans6-a").blur();
-	  $("#walkthrough").append(
-	      '<li id="step7" class="step">'
-		  + "Congratulations, you're done!"
-		  + "<br>(Reload the page to try a new problem)"
-		  + '</li>'
-	  );
-      }
+      theProblem.step4 = {
+	  number: 4,
+	  answerIDs: ["ans4-a", "ans4-b"],
 
+	  display: function() {
+	      var h = Number($("#ans1-a").val());
+	      var k = Number($("#ans1-b").val());
+
+	      $("#walkthrough").append(
+		  '<li id="step4" class="step">'
+		      + 'Plug this other point into your partial formula:<br>'
+		      + '<div class="formula-div">'
+		      + '<span class="formula">'
+		      + '<input id="ans4-a" class="input ans4" type="text" autocomplete="off"></input> '
+		      + '= <i>a</i><big>(</big><input id="ans4-b" class="input ans4" type="text" autocomplete="off"></input> '
+		      + (h === 0 ? '' : signCharacter(-h) + ' ' + Math.abs(h))
+		      + '<big>)</big><sup>2</sup> '
+		      + (k === 0 ? '' : signCharacter(k) + ' ' + Math.abs(k))
+		      + '</span>'
+		      + ' <span id="step4-grade"></span>'
+		      + '</div>'
+		      + '</li>'
+	      );
+	  },
+
+	  checkAnswers: function() {
+	      var ans4a = Number($("#ans4-a").val());
+	      var ans4b = Number($("#ans4-b").val());
+	      
+	      var x = Number($("#ans3-a").val());
+	      var y = Number($("#ans3-b").val());
+	      
+	      return (ans4a === y && ans4b === x);
+	  }
+      };
+
+      theProblem.step5 = {
+	  number: 5,
+	  answerIDs: ["ans5-a"],
+
+	  display: function() {
+	      $("#walkthrough").append(
+		  '<li id="step5" class="step">'
+		      + 'Solve the above equation for the <u>exact</u> simplified value of <i>a</i>:<br>'
+		      + '<div class="formula-div">'
+		      + '<span class="formula">'
+		      + '<i>a</i> = '
+		      + '<input id="ans5-a" class="medinput ans5" type="text" autocomplete="off"></input>'
+		      + '</span>'
+		      + ' <span id="step5-grade"></span>'
+		      + '</div>'
+		      + '</li>'
+	      );
+	  },
+
+	  checkAnswers: function() {
+	      var ans5a = $("#ans5-a").val();
+	      
+	      var a = the_parabola.a;
+	      if (a[1] === 1) {
+		  // The leading coefficient is an integer, so we can
+		  // do a simple check against the number input.
+		  return (a[0] === Number(ans5a));
+	      } else {
+		  // The leading coefficient is a fraction, so we must
+		  // correctly parse the input into a numerator and denominator.
+		  var frac = ans5a.split("/")
+		  return (frac.length === 2
+			  && a[0] === Number(frac[0])
+			  && a[1] === Number(frac[1]));
+	      }
+	  }
+      };
+
+      theProblem.step6 = {
+	  number: 6,
+	  answerIDs: ["ans6-a"],
+	  
+	  display: function() {
+	      $("#walkthrough").append(
+		  '<li id="step6" class="step">'
+		      + 'Write out the complete formula of the parabola in vertex form:<br>'
+		      + '(use the ^ symbol for exponents and simplify signs)<br>'
+		      + '<div class="formula-div">'
+		      + '<span class="formula"><i>f(x)</i> = '
+		      + '<input id="ans6-a" class="biginput ans6" type="text" autocomplete="off"></input>'
+		      + '</span>'
+		      + ' <span id="step6-grade"></span>'
+		      + '</div>'
+		      + '</li>'
+	      );
+	  },
+
+	  checkAnswers: function() {
+	      var ans6a = $("#ans6-a").val();
+	      	      
+	      var a = the_parabola.a;
+	      var h = MATH.rat_real(the_parabola.h);
+	      var k = MATH.rat_real(the_parabola.k);
+	      
+	      return (POLY.is_simplified_vertex_form(ans6a, a, h, k));
+	  }
+      };
+
+      theProblem.step7 = {
+	  number: 7,
+
+	  display: function() {
+	      $("#ans6-a").blur();
+	      $("#walkthrough").append(
+		  '<li id="step7" class="step">'
+		      + "Congratulations, you're done!"
+		      + "<br>(Reload the page to try a new problem)"
+		      + '</li>'
+	      );
+	  }
+      };
+
+      theProblem.currentStepNumber = 1;
 
     </script>
   </head>
@@ -552,15 +547,7 @@
     </div>
 
     <ol id="walkthrough">  
-    <li id="step1" class="step">
-      The vertex of the parabola is at
-      <big>(</big><input id="ans1-a" class="input ans1" type="text" autocomplete="off" formnovalidate></input>,
-      <input id="ans1-b" class="input ans1" type="text" autocomplete="off"></input>
-      <big>)</big>
-      <span id="step1-grade"></span>
-    </li>
     </ol>
-
 
     <script type="text/javascript">
       $(function() {
@@ -569,9 +556,7 @@
 	  draw_grid();
 	  the_parabola = random_quadratic();
 	  graph_function();
-
-	  $(".ans1").change(check_step1);
-	  $("#ans1-a").focus();
+	  displayCurrentStep();
       });
     </script>
 
