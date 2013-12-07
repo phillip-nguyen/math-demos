@@ -168,140 +168,6 @@
 	  return text;
       }	  
 
-
-      function do_factor() {
-	  var n = Number($("#number").val());
-	  alert(JSON.stringify(MATH.factor(n)));
-      }
-
-      function mark_correct(step) {
-	  $("#step"+step+"-grade").html('<div class="check">&#x2713;</div>');
-	  $(".ans"+step).prop('readonly', true);
-	  $(".ans"+step).css("background-color", "white");
-	  $(".ans"+step).unbind("change");
-      }
-
-      function mark_wrong(step) {
-	  $("#step"+step+"-grade").html('<div class="cross">&#x2718;</div>');
-	  $(".ans"+step).css("background-color", "pink");
-      }
-
-      function check_step1() {
-	  var ac = the_quadratic[0]*the_quadratic[2];
-	  var num = Number($("#ans1-a").val());
-	  if (ac === num) {
-	      mark_correct(1);
-	      show_step2();
-	  } else {
-	      mark_wrong(1);
-	  }
-      }
-
-      function check_step2() {
-	  var f1 = $("#ans2-a").val();
-	  var f2 = $("#ans2-b").val();
-	  if (f1 === '' || f2 === '') {
-	      $(".ans2").css("background-color", "white");
-	      return;
-	  }
-	  f1 = Number(f1);
-	  f2 = Number(f2);
-	  if (f1 + f2 === the_quadratic[1] && f1*f2 === the_quadratic[0]*the_quadratic[2]) {
-	      mark_correct(2);
-	      show_step3();
-	  } else {
-	      mark_wrong(2);
-	  }
-      }
-
-      function check_step3() {
-	  var a = $("#ans3-a").val();
-	  var b1 = $("#ans3-b").val();
-	  var b2 = $("#ans3-c").val();
-	  var c = $("#ans3-d").val();
-	  if (a == '' || b1 == '' || b2 == '' || c == '') {
-	      $(".ans3").css("background-color", "white");
-	      return;
-	  }
-	  a = Number(a);
-	  b1 = Number(b1);
-	  b2 = Number(b2);
-	  c = Number(c);
-	  if (a === the_quadratic[2] && c === the_quadratic[0] && b1*b2 === a*c && b1+b2 === the_quadratic[1]) {
-	      mark_correct(3);
-	      show_step4();
-	  } else {
-	      mark_wrong(3);
-	  }
-      }
-
-      function check_step4() {
-	  var ans4a = $("#ans4-a").val();
-	  var ans4b = $("#ans4-b").val();
-	  var ans4c = $("#ans4-c").val();
-	  var ans4d = $("#ans4-d").val();
-
-	  if (ans4a == '' || ans4b == '' || ans4c == '' || ans4d == '') {
-	      $(".ans4").css("background-color", "white");
-	      return;
-	  }
-
-	  var a = Number($("#ans3-a").val());
-	  var b1 = Number($("#ans3-b").val());
-	  var b2 = Number($("#ans3-c").val());
-	  var c = Number($("#ans3-d").val());
-
-	  var gcf1 = MATH.gcd(a, b1);
-	  if (a < 0) gcf1 = -gcf1;
-	  var gcf2 = MATH.gcd(b2, c);
-	  if (b2 < 0) gcf2 = -gcf2;
-	  var rem_poly = [b1/gcf1, a/gcf1];
-	  
-	  if (POLY.equals_simplified_polynomial(ans4a, [0, gcf1]) &&
-	      POLY.equals_simplified_polynomial(ans4b, rem_poly) &&
-	      POLY.equals_simplified_polynomial(ans4c, [gcf2]) &&
-	      POLY.equals_simplified_polynomial(ans4d, rem_poly)) {
-	      
-	      mark_correct(4);
-	      show_step5();
-	  } else {
-	      mark_wrong(4);
-	  }
-      }
-
-      function check_step5() {
-	  var ans5a = $("#ans5-a").val();
-	  var ans5b = $("#ans5-b").val();
-
-	  if (ans5a == '' || ans5b == '') {
-	      $(".ans5").css("background-color", "white");
-	      return;
-	  }
-	  
-	  var a = Number($("#ans3-a").val());
-	  var b1 = Number($("#ans3-b").val());
-	  var b2 = Number($("#ans3-c").val());
-	  var c = Number($("#ans3-d").val());
-
-	  var gcf1 = MATH.gcd(a, b1);
-	  if (a < 0) gcf1 = -gcf1;
-	  var gcf2 = MATH.gcd(b2, c);
-	  if (b2 < 0) gcf2 = -gcf2;
-	  var rem_poly = [b1/gcf1, a/gcf1];
-
-	  if ((POLY.equals_simplified_polynomial(ans5a, [gcf2, gcf1]) &&
-	       POLY.equals_simplified_polynomial(ans5b, rem_poly)) ||
-	      (POLY.equals_simplified_polynomial(ans5b, [gcf2, gcf1]) &&
-	       POLY.equals_simplified_polynomial(ans5a, rem_poly))) {
-	      
-	      mark_correct(5);
-	      show_step6();
-	  } else {
-	      mark_wrong(5);
-	  }
-
-      }
-
       var the_quadratic;
 
       function scale_poly(k, p) {
@@ -344,84 +210,229 @@
 	  the_quadratic = poly;
       }
 
-      function show_step2() {
-	  $("#walkthrough").append(
-	      '<li id="step2" class="step">'
-		  + 'Find two factors of the AC-product which sum to B:<br><p>'
-		  + '<input id="ans2-a" class="input ans2" type="text" autocomplete="off"></input>'
-		  + ' and '
-		  + '<input id="ans2-b" class="input ans2" type="text" autocomplete="off"></input>'
-		  + ' <span id="step2-grade"></span>'
-		  + '</li>'
-	  );
-
-	  $(".ans2").change(check_step2);
-	  $("#ans2-a").focus();
+      function checkStep(step) {
+	  if (isPartiallyBlankStep(step)) {
+	      unmarkWrong(step);
+	  } else if (step.checkAnswers()) {
+	      markCorrect(step);
+	      theProblem.currentStepNumber += 1;
+	      displayCurrentStep();
+	  } else {
+	      markWrong(step);
+	  }
       }
 
-      function show_step3() {
-	  $("#walkthrough").append(
-	      '<li id="step3" class="step">'
-		  + 'Rewrite the quadratic with four terms:<br><p>'
-		  + '<input id="ans3-a" class="coeff ans3" type="text" autocomplete="off"></input><i>x</i><sup>2</sup> + '
-		  + '<input id="ans3-b" class="coeff ans3" type="text" autocomplete="off"></input><i>x</i> + '
-		  + '<input id="ans3-c" class="coeff ans3" type="text" autocomplete="off"></input><i>x</i> + '
-		  + '<input id="ans3-d" class="coeff ans3" type="text" autocomplete="off"></input>'
-		  + ' <span id="step3-grade"></span>'
-		  + '</li>'
-	  );
-
-	  $(".ans3").change(check_step3);
-	  $("#ans3-a").focus();
+      function displayCurrentStep() {
+	  var step = theProblem["step"+theProblem.currentStepNumber];
+	  step.display();
+	  $(".ans"+step.number).change(function() { checkStep(step); });
+	  if (step.answerIDs && step.answerIDs.length > 0) {
+	      $("#"+step.answerIDs[0]).focus();
+	  }
       }
 
-      function show_step4() {
-	  var a = Number($("#ans3-a").val());
-	  var b1 = Number($("#ans3-b").val());
-	  var b2 = Number($("#ans3-c").val());
-	  var c = Number($("#ans3-d").val());
+      function isPartiallyBlankStep(step) {
+	  for (var i = 0, len = step.answerIDs.length; i < len; i++) {
+	      var name = step.answerIDs[i];
+	      var answer = $("#"+name).val();
+	      if (answer === '') return true;
+	  }
+	  return false;
+      }
 
-	  $("#walkthrough").append(
-	      '<li id="step4" class="step">'
-		  + 'Factor by grouping:<br><p></p>'
-	          + '= <big>(' + htmlForPoly([0, b1, a]) + ')</big> + <big>(' + htmlForPoly([c, b2]) + ')</big><p>'
-		  + '= <input id="ans4-a" class="coeff ans4" type="text" autocomplete="off"></input>'
-		  + '<big>(</big><input id="ans4-b" class="biginput ans4" type="text" autocomplete="off"></input><big>)</big>'
-		  + ' + '
-		  + '<input id="ans4-c" class="coeff ans4" type="text" autocomplete="off"></input>'
-		  + '<big>(</big><input id="ans4-d" class="biginput ans4" type="text" autocomplete="off"></input><big>)</big>'
-		  + ' <span id="step4-grade"></span>'
-		  + '</li>'
-	  );
+      function unmarkWrong(step) {
+	  $(".ans"+step.number).css("background-color", "white");
+      }
+
+      function markCorrect(step) {
+	  $("#step"+step.number+"-grade").html('<div class="check">&#x2713;</div>');
+	  $(".ans"+step.number).prop('readonly', true);
+	  $(".ans"+step.number).css("background-color", "white");
+	  $(".ans"+step.number).unbind("change");
+      }
+
+      function markWrong(step) {
+	  $("#step"+step.number+"-grade").html('<div class="cross">&#x2718;</div>');
+	  $(".ans"+step.number).css("background-color", "pink");
+      }
+
+      var theProblem = {currentStepNumber: 1};
+
+      theProblem.step1 = {
+	  number: 1,
+	  answerIDs: ["ans1-a"],
+	
+	  display: function() {
+	      $("#walkthrough").append(
+		  '<li id="step1" class="step">'
+		      + 'AC-product = '
+		      + '<input id="ans1-a" class="input ans1" type="text" autocomplete="off"></input>'
+		      + '<span id="step1-grade"></span>'
+		      + '</li>'
+	      );
+	  },
+  
+	  checkAnswers: function() {
+	      var ac = the_quadratic[0]*the_quadratic[2];
+	      var num = Number($("#ans1-a").val());
+	      return (ac === num);
+	  }
+      };
+
+      theProblem.step2 = {
+	  number: 2,
+	  answerIDs: ["ans2-a", "ans2-b"],
 	  
-	  $(".ans4").change(check_step4);
-	  $("#ans4-a").focus();
-      }
+	  display: function() {
+	      $("#walkthrough").append(
+		  '<li id="step2" class="step">'
+		      + 'Find two factors of the AC-product which sum to B:<br><p>'
+		      + '<input id="ans2-a" class="input ans2" type="text" autocomplete="off"></input>'
+		      + ' and '
+		      + '<input id="ans2-b" class="input ans2" type="text" autocomplete="off"></input>'
+		      + ' <span id="step2-grade"></span>'
+		      + '</li>'
+	      );
+	  },
 
-      function show_step5() {
-	  $("#walkthrough").append(
-	      '<li id="step5" class="step">'
-		  + 'Continue factoring:<br><p></p>'
-		  + '= <big>(</big><input id="ans5-a" class="biginput ans5" type="text" autocomplete="off"></input><big>)</big>'
-		  + '<big>(</big><input id="ans5-b" class="biginput ans5" type="text" autocomplete="off"></input><big>)</big>'
-		  + ' <span id="step5-grade"></span>'
-		  + '</li>'
-	  );
+	  checkAnswers: function() {
+	      var f1 = Number($("#ans2-a").val());
+	      var f2 = Number($("#ans2-b").val());
 
-	  $(".ans5").change(check_step5);
-	  $("#ans5-a").focus();
-      }
+	      return (f1 + f2 === the_quadratic[1] 
+		      && f1*f2 === the_quadratic[0]*the_quadratic[2]);
+	  }
+      };
 
-      function show_step6() {
-	  $("#ans5-a").blur();
-	  $("#ans5-b").blur();
-	  $("#walkthrough").append(
-	      '<li id="step6" class="step">'
-		  + "Congratulations, you're done!"
-		  + "<br>(Reload the page to try a new problem)"
-		  + '</li>'
-	  );
-      }
+      theProblem.step3 = {
+	  number: 3,
+	  answerIDs: ["ans3-a", "ans3-b", "ans3-c", "ans3-d"],
+	  
+	  display: function() {
+	      $("#walkthrough").append(
+		  '<li id="step3" class="step">'
+		      + 'Rewrite the quadratic with four terms:<br><p>'
+		      + '<input id="ans3-a" class="coeff ans3" type="text" autocomplete="off"></input><i>x</i><sup>2</sup> + '
+		      + '<input id="ans3-b" class="coeff ans3" type="text" autocomplete="off"></input><i>x</i> + '
+		      + '<input id="ans3-c" class="coeff ans3" type="text" autocomplete="off"></input><i>x</i> + '
+		      + '<input id="ans3-d" class="coeff ans3" type="text" autocomplete="off"></input>'
+		      + ' <span id="step3-grade"></span>'
+		      + '</li>'
+	      );
+	  },
+
+	  checkAnswers: function() {
+	      var a = Number($("#ans3-a").val());
+	      var b1 = Number($("#ans3-b").val());
+	      var b2 = Number($("#ans3-c").val());
+	      var c = Number($("#ans3-d").val());
+	      return (a === the_quadratic[2] 
+		      && c === the_quadratic[0] 
+		      && b1*b2 === a*c 
+		      && b1+b2 === the_quadratic[1]);
+	  }
+      };
+      
+      theProblem.step4 = {
+	  number: 4,
+	  answerIDs: ["ans4-a", "ans4-b", "ans4-c", "ans4-d"],
+
+	  display: function() {
+	      var a = Number($("#ans3-a").val());
+	      var b1 = Number($("#ans3-b").val());
+	      var b2 = Number($("#ans3-c").val());
+	      var c = Number($("#ans3-d").val());
+	      
+	      $("#walkthrough").append(
+		  '<li id="step4" class="step">'
+		      + 'Factor by grouping:<br><p></p>'
+		      + '= <big>(' + htmlForPoly([0, b1, a]) + ')</big> + <big>(' + htmlForPoly([c, b2]) + ')</big><p>'
+		      + '= <input id="ans4-a" class="coeff ans4" type="text" autocomplete="off"></input>'
+		      + '<big>(</big><input id="ans4-b" class="biginput ans4" type="text" autocomplete="off"></input><big>)</big>'
+		      + ' + '
+		      + '<input id="ans4-c" class="coeff ans4" type="text" autocomplete="off"></input>'
+		      + '<big>(</big><input id="ans4-d" class="biginput ans4" type="text" autocomplete="off"></input><big>)</big>'
+		      + ' <span id="step4-grade"></span>'
+		      + '</li>'
+	      );
+	  },
+
+	  checkAnswers: function() {
+	      var ans4a = $("#ans4-a").val();
+	      var ans4b = $("#ans4-b").val();
+	      var ans4c = $("#ans4-c").val();
+	      var ans4d = $("#ans4-d").val();
+	      	      
+	      var a = Number($("#ans3-a").val());
+	      var b1 = Number($("#ans3-b").val());
+	      var b2 = Number($("#ans3-c").val());
+	      var c = Number($("#ans3-d").val());
+	      
+	      var gcf1 = MATH.gcd(a, b1);
+	      if (a < 0) gcf1 = -gcf1;
+	      var gcf2 = MATH.gcd(b2, c);
+	      if (b2 < 0) gcf2 = -gcf2;
+	      var rem_poly = [b1/gcf1, a/gcf1];
+	      
+	      return (POLY.equals_simplified_polynomial(ans4a, [0, gcf1])
+		      && POLY.equals_simplified_polynomial(ans4b, rem_poly)
+		      && POLY.equals_simplified_polynomial(ans4c, [gcf2])
+		      && POLY.equals_simplified_polynomial(ans4d, rem_poly));
+	  }
+      };
+
+      theProblem.step5 = {
+	  number: 5,
+	  answerIDs: ["ans5-a", "ans5-b"],
+
+	  display: function() {
+	      $("#walkthrough").append(
+		  '<li id="step5" class="step">'
+		      + 'Continue factoring:<br><p></p>'
+		      + '= <big>(</big><input id="ans5-a" class="biginput ans5" type="text" autocomplete="off"></input><big>)</big>'
+		      + '<big>(</big><input id="ans5-b" class="biginput ans5" type="text" autocomplete="off"></input><big>)</big>'
+		      + ' <span id="step5-grade"></span>'
+		      + '</li>'
+	      );
+	  },
+	  
+	  checkAnswers: function() {
+	      var ans5a = $("#ans5-a").val();
+	      var ans5b = $("#ans5-b").val();
+	      
+	      var a = Number($("#ans3-a").val());
+	      var b1 = Number($("#ans3-b").val());
+	      var b2 = Number($("#ans3-c").val());
+	      var c = Number($("#ans3-d").val());
+	      
+	      var gcf1 = MATH.gcd(a, b1);
+	      if (a < 0) gcf1 = -gcf1;
+	      var gcf2 = MATH.gcd(b2, c);
+	      if (b2 < 0) gcf2 = -gcf2;
+	      var rem_poly = [b1/gcf1, a/gcf1];
+	      
+	      return ((POLY.equals_simplified_polynomial(ans5a, [gcf2, gcf1]) 
+		       && POLY.equals_simplified_polynomial(ans5b, rem_poly)) 
+		      || 
+		      (POLY.equals_simplified_polynomial(ans5b, [gcf2, gcf1]) 
+		       && POLY.equals_simplified_polynomial(ans5a, rem_poly)));
+	  }
+      };
+
+      theProblem.step6 = {
+	  number: 6,
+	  
+	  display: function() {
+	      $("#ans5-a").blur();
+	      $("#ans5-b").blur();
+	      $("#walkthrough").append(
+		  '<li id="step6" class="step">'
+		      + "Congratulations, you're done!"
+		      + "<br>(Reload the page to try a new problem)"
+		      + '</li>'
+	      );
+	  }
+      };
 
     </script>
   </head>
@@ -434,17 +445,12 @@
     <p></p>
       
     <ol id="walkthrough">  
-    <li id="step1" class="step">
-      AC-product = <input id="ans1-a" class="input ans1" type="text" autocomplete="off"></input>
-      <span id="step1-grade"></span>
-    </li>
     </ol>
 
     <script type="text/javascript">
       $(function() {
 	  show_random_quadratic();
-	  $(".ans1").change(check_step1);
-	  $("#ans1-a").focus();
+	  displayCurrentStep();
       });
     </script>
 
