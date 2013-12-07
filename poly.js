@@ -516,7 +516,8 @@ POLY = (function() {
 	    return false;
 	}
 	
-	// Check that the k term is correct.
+	// Check that the k term is correct.  We require that
+	// the k be added on the right side.
 	if (k > 0) {
 	    if (node.operator !== '+') return false;
 	    if (node.right.type !== 'NUMBER') return false;
@@ -530,17 +531,30 @@ POLY = (function() {
 	} else if (k === 0) {
 	    // do nothing
 	}
-
-	if (node.operator !== '*') return false;
-
-	// Check that a is correct.
-	var coeff = get_simplified_coefficient(node.left);
-	if (!coeff) return false;
-	if (!arrayEquals(coeff, a)) return false;
+	    
+	if (node.operator !== '*') {
+	    // If the leading coefficient is -1, then it may
+	    // appear simply as a negation node.
+	    if (node.operator === 'NEGATION') {
+		if (!arrayEquals(a, [-1,1])) return false;
+		node = node.child;
+	    } else {
+		// If the leading coefficient is 1, then it's possible that
+		// it was omitted, hence no multiplication node.
+		if (!arrayEquals(a, [1, 1])) return false;
+	    }
+	} else {
+	    // If this was a multiplication node, then the left node
+	    // should represent the leading coefficient.
+	    // Check that a is correct.
+	    var coeff = get_simplified_coefficient(node.left);
+	    if (!coeff) return false;
+	    if (!arrayEquals(coeff, a)) return false;
+	    node = node.right;
+	}
 
 	// Check for square	
-	if (node.right.operator !== '^') return false;
-	node = node.right;
+	if (node.operator !== '^') return false;
 	if (node.right.type !== 'NUMBER' || node.right.value !== 2) return false;
 	node = node.left;
 
@@ -589,7 +603,6 @@ POLY = (function() {
 	    return false;
 	}
     }
-
 
     return { 
 	degree: polynomial_degree,
