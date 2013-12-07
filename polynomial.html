@@ -21,7 +21,7 @@
       #graph1 { z-index: 0; }
       #graph2 { z-index: 1; }
       .formula {
-	  font: 40px serif;
+	  font: 32px serif;
       }
       .formula-div {
 	  text-align: left;
@@ -72,7 +72,7 @@
       }
       .biginput { 
 	  font-size: 24px;
-	  width: 300px;
+	  width: 500px;
 	  text-align: center;
       }
       .step {
@@ -100,6 +100,9 @@
       }
       #walkthrough li {
 	  margin: 25px;
+      }
+      #zeros-list li {
+	  margin: 6px;
       }
     </style>
 
@@ -336,166 +339,326 @@
 	  }
       }
 
-      function mark_correct(step) {
-	  $("#step"+step+"-grade").html('<div class="check">&#x2713;</div>');
-	  $(".ans"+step).prop('readonly', true);
-	  $(".ans"+step).css("background-color", "white");
-	  $(".ans"+step).unbind("change");
-      }
-
-      function mark_wrong(step) {
-	  $("#step"+step+"-grade").html('<div class="cross">&#x2718;</div>');
-	  $(".ans"+step).css("background-color", "pink");
-      }
-
-      function check_step1a() {
-	  var z1 = $("#ans1a-a").val();
-	  var m1 = $("#ans1a-b").val();
-
-	  if (z1 == '' || m1 == '') {
-	      $(".ans1a").css("background-color", "white");
-	      return;
-	  }
-	  
-	  z1 = Number(z1);
-	  m1 = Number(m1);
-	  
-	  if (z1 in the_polynomial.zeros && the_polynomial.zeros[z1] === m1) {
-	      mark_correct('1a');
-	      show_step1b();
+      function checkStep(step) {
+	  if (isPartiallyBlankStep(step)) {
+	      unmarkWrong(step);
+	  } else if (step.checkAnswers()) {
+	      markCorrect(step);
+	      theProblem.currentStepNumber += 1;
+	      displayCurrentStep();
 	  } else {
-	      mark_wrong('1a');
+	      markWrong(step);
 	  }
       }
 
-      function check_step1b() {
-	  var z2 = $("#ans1b-a").val();
-	  var m2 = $("#ans1b-b").val();
-
-	  if (z2 == '' || m2 == '') {
-	      $(".ans1a").css("background-color", "white");
-	      return;
-	  }
-	  
-	  var z1 = Number($("#ans1a-a").val());
-	  z2 = Number(z2);
-	  m2 = Number(m2);
-	  
-	  if (z1 !== z2 && z2 in the_polynomial.zeros && the_polynomial.zeros[z2] === m2) {
-	      mark_correct('1b');
-	      show_step1c();
-	  } else {
-	      mark_wrong('1b');
+      function displayCurrentStep() {
+	  var step = theProblem["step"+theProblem.currentStepNumber];
+	  step.display();
+	  $(".ans"+step.number).change(function() { checkStep(step); });
+	  if (step.answerIDs && step.answerIDs.length > 0) {
+	      $("#"+step.answerIDs[0]).focus();
 	  }
       }
 
-      function check_step1c() {
-	  var z3 = $("#ans1c-a").val();
-	  var m3 = $("#ans1c-b").val();
-
-	  if (z3 == '' || m3 == '') {
-	      $(".ans1a").css("background-color", "white");
-	      return;
+      function isPartiallyBlankStep(step) {
+	  for (var i = 0, len = step.answerIDs.length; i < len; i++) {
+	      var name = step.answerIDs[i];
+	      var answer = $("#"+name).val();
+	      if (answer === '') return true;
 	  }
-	  
-	  var z1 = Number($("#ans1a-a").val());
-	  var z2 = Number($("#ans1b-a").val());
-	  z3 = Number(z3);
-	  m3 = Number(m3);
-	  
-	  if (z3 !== z1 && z3 !== z2 && z3 in the_polynomial.zeros && the_polynomial.zeros[z3] === m3) {
-	      mark_correct('1c');
-	      show_step2();
-	  } else {
-	      mark_wrong('1c');
-	  }
+	  return false;
       }
 
-      function check_step2() {
-	  var ans_f1 = $("#ans2-a").val();
-	  var ans_e1 = $("#ans2-b").val();
-	  var ans_f2 = $("#ans2-c").val();
-	  var ans_e2 = $("#ans2-d").val();
-	  var ans_f3 = $("#ans2-e").val();
-	  var ans_e3 = $("#ans2-f").val();
+      function unmarkWrong(step) {
+	  $(".ans"+step.number).css("background-color", "white");
+      }
 
-	  if (ans_f1 == '' || ans_f2 == '' || ans_f3 == '' || ans_e1 == '' || ans_e2 == '' || ans_e3 == '') {
-	      $(".ans2").css("background-color", "white");
-	      return;
-	  }
+      function markCorrect(step) {
+	  $("#step"+step.number+"-grade").html('<div class="check">&#x2713;</div>');
+	  $(".ans"+step.number).prop('readonly', true);
+	  $(".ans"+step.number).css("background-color", "white");
+	  $(".ans"+step.number).unbind("change");
+      }
 
-	  var p = the_polynomial;
-	  var factors = [ [-p.z1, 1], [-p.z2, 1], [-p.z3, 1] ]
-	  var exps = [p.m1, p.m2, p.m3];
-	  var matches = [false, false, false];
+      function markWrong(step) {
+	  $("#step"+step.number+"-grade").html('<div class="cross">&#x2718;</div>');
+	  $(".ans"+step.number).css("background-color", "pink");
+      }
+
+      var theProblem = {currentStepNumber: 1};
+
+      theProblem.step1 = {
+	  number: 1,
+	  answerIDs: ["ans1-a", "ans1-b"],
+
+	  display: function() {
+	      $("#walkthrough").append(
+		  '<li id="steps1-2-3" class="step">'
+		      + 'List each zero and its multiplicity:<br>'
+		      + '<ul id="zeros-list" style="list-style-type:disc">'
+		      + '<li> zero at <it>x</it> = <input id="ans1-a" class="input ans1" type="text" autocomplete="off" formnovalidate></input>'
+		      + ' with a multiplicity of <input id="ans1-b" class="input ans1" type="text" autocomplete="off"></input>'
+		      + ' <span id="step1-grade"></span>'
+		      + '</li></ul></li>'
+	      );
+	  },
+
+	  checkAnswers: function() {
+	      var z1 = Number($("#ans1-a").val());
+	      var m1 = Number($("#ans1-b").val());
 	  
-	  function match_factor(f, e) {
-	      for (var i = 0, len = factors.length; i < len; i++) {
-		  if (POLY.equals_simplified_polynomial(f, factors[i]) && e == exps[i]) {
-		      matches[i] = true;
+	      return (z1 in the_polynomial.zeros 
+		      && the_polynomial.zeros[z1] === m1);
+	  }
+      };
+
+      theProblem.step2 = {
+	  number: 2,
+	  answerIDs: ["ans2-a", "ans2-b"],
+
+	  display: function() {
+	      $("#zeros-list").append(
+		  '<li> zero at <it>x</it> = <input id="ans2-a" class="input ans2" type="text" autocomplete="off" formnovalidate></input>'
+		      + ' with a multiplicity of <input id="ans2-b" class="input ans2" type="text" autocomplete="off"></input>'
+		      + ' <span id="step2-grade"></span>'
+		      + '</li>'
+	      );
+	  },
+
+	  checkAnswers: function() {
+	      var z1 = Number($("#ans1-a").val());
+	      var z2 = Number($("#ans2-a").val());
+	      var m2 = Number($("#ans2-b").val());
+	      return (z1 !== z2 
+		      && z2 in the_polynomial.zeros 
+		      && the_polynomial.zeros[z2] === m2);
+	  }
+      };
+
+      theProblem.step3 = {
+	  number: 3,
+	  answerIDs: ["ans3-a", "ans3-b"],
+	  
+	  display: function() {
+	      $("#zeros-list").append(
+		  '<li> zero at <it>x</it> = <input id="ans3-a" class="input ans3" type="text" autocomplete="off" formnovalidate></input>'
+		      + ' with a multiplicity of <input id="ans3-b" class="input ans3" type="text" autocomplete="off"></input>'
+		      + ' <span id="step3-grade"></span>'
+		      + '</li>'
+	      );
+	  },
+
+	  checkAnswers: function() {
+	      var z1 = Number($("#ans1-a").val());
+	      var z2 = Number($("#ans2-a").val());
+	      var z3 = Number($("#ans3-a").val());
+	      var m3 = Number($("#ans3-b").val());
+	      return (z3 !== z1 && z3 !== z2 
+		      && z3 in the_polynomial.zeros 
+		      && the_polynomial.zeros[z3] === m3);
+	  }
+      };
+
+      theProblem.step4 = {
+	  number: 4,
+	  answerIDs: ["ans4-a", "ans4-b", "ans4-c", "ans4-d", "ans4-e", "ans4-f"],
+
+	  display: function () {
+	      $("#walkthrough").append(
+		  '<li id="step4" class="step">'
+		      + 'Write out the factors and their powers:<br><br>'
+		      + '<div class="formula-div"><span class="formula"><i>f(x)</i> = <i>a</i>'
+		      + '&middot;'
+		      + '<big>(</big><input id="ans4-a" class="input ans4" type="text" autocomplete="off" formnovalidate><big>)</big>'
+		      + '<sup><input id="ans4-b" class="smallinput ans4" type="text" autocomplete="off" formnovalidate></sup>'
+		      + '&middot;'
+		      + '<big>(</big><input id="ans4-c" class="input ans4" type="text" autocomplete="off" formnovalidate><big>)</big>'
+		      + '<sup><input id="ans4-d" class="smallinput ans4" type="text" autocomplete="off" formnovalidate></sup>'
+		      + '&middot;'
+		      + '<big>(</big><input id="ans4-e" class="input ans4" type="text" autocomplete="off" formnovalidate><big>)</big>'
+		      + '<sup><input id="ans4-f" class="smallinput ans4" type="text" autocomplete="off" formnovalidate></sup>'
+		      + ' <span id="step4-grade"></span>'
+		      + '</span></div>'
+		      + '</li>'
+	      );
+	  },
+	  
+	  checkAnswers: function() {
+	      var ans_f1 = $("#ans4-a").val();
+	      var ans_e1 = $("#ans4-b").val();
+	      var ans_f2 = $("#ans4-c").val();
+	      var ans_e2 = $("#ans4-d").val();
+	      var ans_f3 = $("#ans4-e").val();
+	      var ans_e3 = $("#ans4-f").val();
+
+	      var p = the_polynomial;
+	      var zeros = [p.z1, p.z2, p.z3];
+	      var exps = [p.m1, p.m2, p.m3];
+	      var factors = [ [-p.z1, 1], [-p.z2, 1], [-p.z3, 1] ];
+	      var matches = [false, false, false];
+	  
+	      theProblem.orderedFactors = [];
+	      function match_factor(f, e) {
+		  for (var i = 0, len = factors.length; i < len; i++) {
+		      if (POLY.equals_simplified_polynomial(f, factors[i]) && e == exps[i]) {
+			  matches[i] = true;
+			  // Save the user's ordering of the factors/powers
+			  // so that we can put them in same order later.
+			  theProblem.orderedFactors.push([zeros[i], exps[i]]);
+		      }
 		  }
 	      }
-	  }
 	  
-	  match_factor(ans_f1, Number(ans_e1));
-	  match_factor(ans_f2, Number(ans_e2));
-	  match_factor(ans_f3, Number(ans_e3));
+	      match_factor(ans_f1, Number(ans_e1));
+	      match_factor(ans_f2, Number(ans_e2));
+	      match_factor(ans_f3, Number(ans_e3));
 
-	  if (matches[0] && matches[1] && matches[2]) {
-	      mark_correct('2');
-	      show_step3();
+	      return (matches[0] && matches[1] && matches[2]);
+	  }
+      };
+
+      theProblem.step5 = {
+	  number: 5,
+	  answerIDs: ["ans5-a", "ans5-b"],
+	  
+	  display: function() {
+	      $("#walkthrough").append(
+		  '<li id="step5" class="step">'
+		      + 'Another nice point on the graph is '
+		      + '<big>(</big><input id="ans5-a" class="input ans5" type="text" autocomplete="off"></input>, '
+		      + '<input id="ans5-b" class="input ans5" type="text" autocomplete="off"></input>'
+		      + '<big>)</big>'
+		      + ' <span id="step5-grade"></span>'
+		      + '</li>'
+	      );
+	  },
+	  
+	  checkAnswers: function() {
+	      var ans5a = Number($("#ans5-a").val());
+	      var ans5b = Number($("#ans5-b").val());
+	      return (the_polynomial.eval(ans5a) === ans5b);
+	  }
+      };
+
+      function signCharacter(x) {
+	  if (x < 0) {
+	      return '&#8722;';
 	  } else {
-	      mark_wrong('2');
+	      return '+';
 	  }
+      }
+
+      theProblem.step6 = {
+	  number: 6,
+	  answerIDs: ["ans6-a", "ans6-b", "ans6-c", "ans6-d"],
 	  
-      }
+	  display: function() {
+	      function htmlForZero(x) {
+		  return (x === 0 ? '' : signCharacter(-x) + ' ' + Math.abs(x));
+	      }
 
-      function show_step1b() {
-	  $("#zeros-list").append(
-	      '<li> zero at <it>x</it> = <input id="ans1b-a" class="input ans1b" type="text" autocomplete="off" formnovalidate></input>'
-		  + ' with a multiplicity of <input id="ans1b-b" class="input ans1b" type="text" autocomplete="off"></input>'
-		  + ' <span id="step1b-grade"></span>'
-		  + '</li>'
-	  );
+	      function htmlForExponent(x) {
+		  if (x === 1) return '';
+		  if (x > 0) return String(x);
+		  return '&#8722;' + Math.abs(x);
+	      }		  
+		  
+	      $("#walkthrough").append(
+		  '<li id="step6" class="step">'
+		      + 'Plug this point into your partial formula for the polynomial:<br>'
+		      + '<div class="formula-div">'
+		      + '<span class="formula">'
+		      + '<input id="ans6-a" class="input ans6" type="text" autocomplete="off"></input> '
+		      + '= <i>a</i>'
+		      + '<big>(</big><input id="ans6-b" class="input ans6" type="text" autocomplete="off"></input> '
+		      + htmlForZero(theProblem.orderedFactors[0][0])
+		      + '<big>)</big><sup>'+htmlForExponent(theProblem.orderedFactors[0][1])+'</sup>'
+		      + '<big>(</big><input id="ans6-c" class="input ans6" type="text" autocomplete="off"></input> '
+		      + htmlForZero(theProblem.orderedFactors[1][0])
+		      + '<big>)</big><sup>'+htmlForExponent(theProblem.orderedFactors[1][1])+'</sup>'
+		      + '<big>(</big><input id="ans6-d" class="input ans6" type="text" autocomplete="off"></input> '
+		      + htmlForZero(theProblem.orderedFactors[2][0])
+		      + '<big>)</big><sup>'+htmlForExponent(theProblem.orderedFactors[2][1])+'</sup>'
+		      + '</span>'
+		      + ' <span id="step6-grade"></span>'
+		      + '</div>'
+		      + '</li>'
+	      );
+	  },
+	  
+	  checkAnswers: function() {
+	      var ans5a = Number($("#ans5-a").val());
+	      var ans5b = Number($("#ans5-b").val());
+	      var ans6a = Number($("#ans6-a").val());
+	      var ans6b = Number($("#ans6-b").val());
+	      var ans6c = Number($("#ans6-c").val());
+	      var ans6d = Number($("#ans6-d").val());
+	      return (ans5b === ans6a && ans5a === ans6b && ans5a == ans6c && ans5a === ans6d);
+	  }
+      };
 
-	  $(".ans1b").change(check_step1b);
-	  $("#ans1b-a").focus();
-      }
+      theProblem.step7 = {
+	  number: 7,
+	  answerIDs: ["ans7-a"],
+	  
+	  display: function() {
+	      $("#walkthrough").append(
+		  '<li id="step5" class="step">'
+		      + 'Solve the above equation for the <u>exact</u> simplified value of <i>a</i>:<br>'
+		      + '<div class="formula-div">'
+		      + '<span class="formula">'
+		      + '<i>a</i> = '
+		      + '<input id="ans7-a" class="medinput ans7" type="text" autocomplete="off"></input>'
+		      + '</span>'
+		      + ' <span id="step7-grade"></span>'
+		      + '</div>'
+		      + '</li>'
+	      );
+	  },
 
-      function show_step1c() {
-	  $("#zeros-list").append(
-	      '<li> zero at <it>x</it> = <input id="ans1c-a" class="input ans1c" type="text" autocomplete="off" formnovalidate></input>'
-		  + ' with a multiplicity of <input id="ans1c-b" class="input ans1c" type="text" autocomplete="off"></input>'
-		  + ' <span id="step1c-grade"></span>'
-		  + '</li>'
-	  );
+	  checkAnswers: function() {
+	      var ans7a = $("#ans7-a").val();
+	      
+	      var a = the_polynomial.a;
+	      if (a[1] === 1) {
+		  // The leading coefficient is an integer, so we can
+		  // do a simple check against the number input.
+		  return (a[0] === Number(ans7a));
+	      } else {
+		  // The leading coefficient is a fraction, so we must
+		  // correctly parse the input into a numerator and denominator.
+		  var frac = ans7a.split("/")
+		  return (frac.length === 2
+			  && a[0] === Number(frac[0])
+			  && a[1] === Number(frac[1]));
+	      }
+	  }
+      };
 
-	  $(".ans1c").change(check_step1c);
-	  $("#ans1c-a").focus();
-      }
+      theProblem.step8 = {
+	  number: 8,
+	  answerIDs: ["ans8-a"],
+	  
+	  display: function() {
+	      $("#walkthrough").append(
+		  '<li id="step6" class="step">'
+		      + 'Write out the complete formula for the polynomial function<br>'
+		      + '(use the ^ symbol for exponents and simplify signs)<br>'
+		      + '<div class="formula-div">'
+		      + '<span class="formula"><i>f(x)</i> = '
+		      + '<input id="ans8-a" class="biginput ans8" type="text" autocomplete="off"></input>'
+		      + '</span>'
+		      + ' <span id="step8-grade"></span>'
+		      + '</div>'
+		      + '</li>'
+	      );
+	  },
 
-      function show_step2() {
-	  $("#walkthrough").append(
-	      '<li id="step2" class="step">'
-		  + 'Write out the factors and their powers:<br><br>'
-		  + '<div class="formula-div"><i>f(x)</i> = <i>a</i>'
-		  + '&middot;'
-		  + '<big>(</big><input id="ans2-a" class="input ans2" type="text" autocomplete="off" formnovalidate><big>)</big>'
-		  + '<sup><input id="ans2-b" class="smallinput ans2" type="text" autocomplete="off" formnovalidate></sup>'
-		  + '&middot;'
-		  + '<big>(</big><input id="ans2-c" class="input ans2" type="text" autocomplete="off" formnovalidate><big>)</big>'
-		  + '<sup><input id="ans2-d" class="smallinput ans2" type="text" autocomplete="off" formnovalidate></sup>'
-		  + '&middot;'
-		  + '<big>(</big><input id="ans2-e" class="input ans2" type="text" autocomplete="off" formnovalidate><big>)</big>'
-		  + '<sup><input id="ans2-f" class="smallinput ans2" type="text" autocomplete="off" formnovalidate></sup>'
-		  + ' <span id="step2-grade"></span>'
-		  + '</div>'
-		  + '</li>'
-	  );
-
-	  $(".ans2").change(check_step2);
-	  $("#ans2-a").focus();
-      }
+	  checkAnswers: function() {
+	      var ans8a = $("#ans8-a").val();
+	      return false;
+	  }
+      };
 
     </script>
   </head>
@@ -507,15 +670,6 @@
     </div>
 
     <ol id="walkthrough">  
-      <li id="step1" class="step">
-	List each zero and its multiplicity:<br>
-	<ul id="zeros-list" style="list-style-type:disc">
-	  <li> zero at <it>x</it> = <input id="ans1a-a" class="input ans1a" type="text" autocomplete="off" formnovalidate></input>
-	    with a multiplicity of <input id="ans1a-b" class="input ans1a" type="text" autocomplete="off"></input>
-	    <span id="step1a-grade"></span>
-	  </li>
-	</ul>
-      </li>      
     </ol>
       
     <script type="text/javascript">
@@ -525,9 +679,7 @@
 	  draw_grid();
 	  the_polynomial = good_random_poly3();
 	  graph_function();
-
-	  $(".ans1a").change(check_step1a);
-	  $("#ans1a-a").focus();
+	  displayCurrentStep();
       });
     </script>
 
