@@ -158,6 +158,7 @@
 	      'z1': z1, 'z2': z2, 'z3': z3,
 	      'm1': m1, 'm2': m2, 'm3': m3, 
 	      'critx': critx, 
+	      'degree': m1 + m2 + m3
 	  };
 	  poly.zeros = {};
 	  poly.zeros[z1] = m1;
@@ -394,7 +395,8 @@
 	  display: function() {
 	      $("#walkthrough").append(
 		  '<li id="steps1-2-3" class="step">'
-		      + 'List each zero and its multiplicity:<br>'
+		      + 'Assume that the above polynomial function <i>f(x)</i> has the minimum possible degree.<br>'
+		      + 'List each zero of <i>f</i> and its multiplicity:<br>'
 		      + '<ul id="zeros-list" style="list-style-type:disc">'
 		      + '<li> zero at <it>x</it> = <input id="ans1-a" class="input ans1" type="text" autocomplete="off" formnovalidate></input>'
 		      + ' with a multiplicity of <input id="ans1-b" class="input ans1" type="text" autocomplete="off"></input>'
@@ -461,35 +463,55 @@
 
       theProblem.step4 = {
 	  number: 4,
-	  answerIDs: ["ans4-a", "ans4-b", "ans4-c", "ans4-d", "ans4-e", "ans4-f"],
+	  answerIDs: ["ans4-a"],
+	  
+	  display: function() {
+	      $("#walkthrough").append(
+		  '<li id="step4" class="step">'
+		      + 'What is the minimum possible degree of <i>f(x)</i>? '
+		      + '<input id="ans4-a" class="input ans4" type="text" autocomplete="off" formnovalidate>'
+		      + ' <span id="step4-grade"></span>'
+		      + '</li>'
+	      );
+	  },
+
+	  checkAnswers: function() {
+	      var ans4a = Number($("#ans4-a").val());
+	      return (ans4a === the_polynomial.degree);
+	  }
+      }
+
+      theProblem.step5 = {
+	  number: 5,
+	  answerIDs: ["ans5-a", "ans5-b", "ans5-c", "ans5-d", "ans5-e", "ans5-f"],
 
 	  display: function () {
 	      $("#walkthrough").append(
-		  '<li id="step4" class="step">'
-		      + 'Write out the factors and their powers:<br><br>'
+		  '<li id="step5" class="step">'
+		      + 'Write out the factors and their powers:<br>'
 		      + '<div class="formula-div"><span class="formula"><i>f(x)</i> = <i>a</i>'
 		      + '&middot;'
-		      + '<big>(</big><input id="ans4-a" class="input ans4" type="text" autocomplete="off" formnovalidate><big>)</big>'
-		      + '<sup><input id="ans4-b" class="smallinput ans4" type="text" autocomplete="off" formnovalidate></sup>'
+		      + '<big>(</big><input id="ans5-a" class="input ans5" type="text" autocomplete="off" formnovalidate><big>)</big>'
+		      + '<sup><input id="ans5-b" class="smallinput ans5" type="text" autocomplete="off" formnovalidate></sup>'
 		      + '&middot;'
-		      + '<big>(</big><input id="ans4-c" class="input ans4" type="text" autocomplete="off" formnovalidate><big>)</big>'
-		      + '<sup><input id="ans4-d" class="smallinput ans4" type="text" autocomplete="off" formnovalidate></sup>'
+		      + '<big>(</big><input id="ans5-c" class="input ans5" type="text" autocomplete="off" formnovalidate><big>)</big>'
+		      + '<sup><input id="ans5-d" class="smallinput ans5" type="text" autocomplete="off" formnovalidate></sup>'
 		      + '&middot;'
-		      + '<big>(</big><input id="ans4-e" class="input ans4" type="text" autocomplete="off" formnovalidate><big>)</big>'
-		      + '<sup><input id="ans4-f" class="smallinput ans4" type="text" autocomplete="off" formnovalidate></sup>'
-		      + ' <span id="step4-grade"></span>'
+		      + '<big>(</big><input id="ans5-e" class="input ans5" type="text" autocomplete="off" formnovalidate><big>)</big>'
+		      + '<sup><input id="ans5-f" class="smallinput ans5" type="text" autocomplete="off" formnovalidate></sup>'
+		      + ' <span id="step5-grade"></span>'
 		      + '</span></div>'
 		      + '</li>'
 	      );
 	  },
 	  
 	  checkAnswers: function() {
-	      var ans_f1 = $("#ans4-a").val();
-	      var ans_e1 = $("#ans4-b").val();
-	      var ans_f2 = $("#ans4-c").val();
-	      var ans_e2 = $("#ans4-d").val();
-	      var ans_f3 = $("#ans4-e").val();
-	      var ans_e3 = $("#ans4-f").val();
+	      var ans_f1 = $("#ans5-a").val();
+	      var ans_e1 = $("#ans5-b").val();
+	      var ans_f2 = $("#ans5-c").val();
+	      var ans_e2 = $("#ans5-d").val();
+	      var ans_f3 = $("#ans5-e").val();
+	      var ans_e3 = $("#ans5-f").val();
 
 	      var p = the_polynomial;
 	      var zeros = [p.z1, p.z2, p.z3];
@@ -517,26 +539,26 @@
 	  }
       };
 
-      theProblem.step5 = {
-	  number: 5,
-	  answerIDs: ["ans5-a", "ans5-b"],
+      theProblem.step6 = {
+	  number: 6,
+	  answerIDs: ["ans6-a", "ans6-b"],
 	  
 	  display: function() {
 	      $("#walkthrough").append(
-		  '<li id="step5" class="step">'
+		  '<li id="step6" class="step">'
 		      + 'Another nice point on the graph is '
-		      + '<big>(</big><input id="ans5-a" class="input ans5" type="text" autocomplete="off"></input>, '
-		      + '<input id="ans5-b" class="input ans5" type="text" autocomplete="off"></input>'
+		      + '<big>(</big><input id="ans6-a" class="input ans6" type="text" autocomplete="off"></input>, '
+		      + '<input id="ans6-b" class="input ans6" type="text" autocomplete="off"></input>'
 		      + '<big>)</big>'
-		      + ' <span id="step5-grade"></span>'
+		      + ' <span id="step6-grade"></span>'
 		      + '</li>'
 	      );
 	  },
 	  
 	  checkAnswers: function() {
-	      var ans5a = Number($("#ans5-a").val());
-	      var ans5b = Number($("#ans5-b").val());
-	      return (the_polynomial.eval(ans5a) === ans5b);
+	      var ans6a = Number($("#ans6-a").val());
+	      var ans6b = Number($("#ans6-b").val());
+	      return (the_polynomial.eval(ans6a) === ans6b);
 	  }
       };
 
@@ -548,9 +570,9 @@
 	  }
       }
 
-      theProblem.step6 = {
-	  number: 6,
-	  answerIDs: ["ans6-a", "ans6-b", "ans6-c", "ans6-d"],
+      theProblem.step7 = {
+	  number: 7,
+	  answerIDs: ["ans7-a", "ans7-b", "ans7-c", "ans7-d"],
 	  
 	  display: function() {
 	      function htmlForZero(x) {
@@ -564,74 +586,36 @@
 	      }		  
 		  
 	      $("#walkthrough").append(
-		  '<li id="step6" class="step">'
+		  '<li id="step7" class="step">'
 		      + 'Plug this point into your partial formula for the polynomial:<br>'
 		      + '<div class="formula-div">'
 		      + '<span class="formula">'
-		      + '<input id="ans6-a" class="input ans6" type="text" autocomplete="off"></input> '
+		      + '<input id="ans7-a" class="input ans7" type="text" autocomplete="off"></input> '
 		      + '= <i>a</i>'
-		      + '<big>(</big><input id="ans6-b" class="input ans6" type="text" autocomplete="off"></input> '
+		      + '<big>(</big><input id="ans7-b" class="input ans7" type="text" autocomplete="off"></input> '
 		      + htmlForZero(theProblem.orderedFactors[0][0])
 		      + '<big>)</big><sup>'+htmlForExponent(theProblem.orderedFactors[0][1])+'</sup>'
-		      + '<big>(</big><input id="ans6-c" class="input ans6" type="text" autocomplete="off"></input> '
+		      + '<big>(</big><input id="ans7-c" class="input ans7" type="text" autocomplete="off"></input> '
 		      + htmlForZero(theProblem.orderedFactors[1][0])
 		      + '<big>)</big><sup>'+htmlForExponent(theProblem.orderedFactors[1][1])+'</sup>'
-		      + '<big>(</big><input id="ans6-d" class="input ans6" type="text" autocomplete="off"></input> '
+		      + '<big>(</big><input id="ans7-d" class="input ans7" type="text" autocomplete="off"></input> '
 		      + htmlForZero(theProblem.orderedFactors[2][0])
 		      + '<big>)</big><sup>'+htmlForExponent(theProblem.orderedFactors[2][1])+'</sup>'
-		      + '</span>'
-		      + ' <span id="step6-grade"></span>'
-		      + '</div>'
-		      + '</li>'
-	      );
-	  },
-	  
-	  checkAnswers: function() {
-	      var ans5a = Number($("#ans5-a").val());
-	      var ans5b = Number($("#ans5-b").val());
-	      var ans6a = Number($("#ans6-a").val());
-	      var ans6b = Number($("#ans6-b").val());
-	      var ans6c = Number($("#ans6-c").val());
-	      var ans6d = Number($("#ans6-d").val());
-	      return (ans5b === ans6a && ans5a === ans6b && ans5a == ans6c && ans5a === ans6d);
-	  }
-      };
-
-      theProblem.step7 = {
-	  number: 7,
-	  answerIDs: ["ans7-a"],
-	  
-	  display: function() {
-	      $("#walkthrough").append(
-		  '<li id="step5" class="step">'
-		      + 'Solve the above equation for the <u>exact</u> simplified value of <i>a</i>:<br>'
-		      + '<div class="formula-div">'
-		      + '<span class="formula">'
-		      + '<i>a</i> = '
-		      + '<input id="ans7-a" class="medinput ans7" type="text" autocomplete="off"></input>'
 		      + '</span>'
 		      + ' <span id="step7-grade"></span>'
 		      + '</div>'
 		      + '</li>'
 	      );
 	  },
-
+	  
 	  checkAnswers: function() {
-	      var ans7a = $("#ans7-a").val();
-	      
-	      var a = the_polynomial.a;
-	      if (a[1] === 1) {
-		  // The leading coefficient is an integer, so we can
-		  // do a simple check against the number input.
-		  return (a[0] === Number(ans7a));
-	      } else {
-		  // The leading coefficient is a fraction, so we must
-		  // correctly parse the input into a numerator and denominator.
-		  var frac = ans7a.split("/")
-		  return (frac.length === 2
-			  && a[0] === Number(frac[0])
-			  && a[1] === Number(frac[1]));
-	      }
+	      var x = Number($("#ans6-a").val());
+	      var y = Number($("#ans6-b").val());
+	      var ans7a = Number($("#ans7-a").val());
+	      var ans7b = Number($("#ans7-b").val());
+	      var ans7c = Number($("#ans7-c").val());
+	      var ans7d = Number($("#ans7-d").val());
+	      return (y === ans7a && x === ans7b && x === ans7c && x === ans7d);
 	  }
       };
 
@@ -641,12 +625,12 @@
 	  
 	  display: function() {
 	      $("#walkthrough").append(
-		  '<li id="step6" class="step">'
-		      + 'Write out the complete formula for the polynomial function<br>'
-		      + '(use the ^ symbol for exponents and simplify signs)<br>'
+		  '<li id="step8" class="step">'
+		      + 'Solve the above equation for the <u>exact</u> simplified value of <i>a</i>:<br>'
 		      + '<div class="formula-div">'
-		      + '<span class="formula"><i>f(x)</i> = '
-		      + '<input id="ans8-a" class="biginput ans8" type="text" autocomplete="off"></input>'
+		      + '<span class="formula">'
+		      + '<i>a</i> = '
+		      + '<input id="ans8-a" class="medinput ans8" type="text" autocomplete="off"></input>'
 		      + '</span>'
 		      + ' <span id="step8-grade"></span>'
 		      + '</div>'
@@ -656,7 +640,61 @@
 
 	  checkAnswers: function() {
 	      var ans8a = $("#ans8-a").val();
-	      return false;
+	      
+	      var a = the_polynomial.a;
+	      if (a[1] === 1) {
+		  // The leading coefficient is an integer, so we can
+		  // do a simple check against the number input.
+		  return (a[0] === Number(ans8a));
+	      } else {
+		  // The leading coefficient is a fraction, so we must
+		  // correctly parse the input into a numerator and denominator.
+		  var frac = ans8a.split("/")
+		  return (frac.length === 2
+			  && a[0] === Number(frac[0])
+			  && a[1] === Number(frac[1]));
+	      }
+	  }
+      };
+
+      theProblem.step9 = {
+	  number: 9,
+	  answerIDs: ["ans9-a"],
+	  
+	  display: function() {
+	      $("#walkthrough").append(
+		  '<li id="step9" class="step">'
+		      + 'Write out the complete formula for the polynomial function<br>'
+		      + '(use the ^ symbol for exponents and simplify signs)<br>'
+		      + '<div class="formula-div">'
+		      + '<span class="formula"><i>f(x)</i> = '
+		      + '<input id="ans9-a" class="biginput ans9" type="text" autocomplete="off"></input>'
+		      + '</span>'
+		      + ' <span id="step9-grade"></span>'
+		      + '</div>'
+		      + '</li>'
+	      );
+	  },
+
+	  checkAnswers: function() {
+	      var ans9a = $("#ans9-a").val();
+	      var p = the_polynomial;
+	      var factors = [ [-p.z1, 1], [-p.z2, 1], [-p.z3, 1] ];
+	      var exps = [p.m1, p.m2, p.m3];
+	      return POLY.isFactoredForm(ans9a, p.a, factors, exps);
+	  }
+      };
+
+      theProblem.step10 = {
+	  number: 10,
+	  display: function() {
+	      $("#ans9-a").blur();
+	      $("#walkthrough").append(
+		  '<li id="step10" class="step">'
+		      + "Congratulations, you're done!"
+		      + "<br>(Reload the page to try a new problem)"
+		      + '</li>'
+	      );
 	  }
       };
 

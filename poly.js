@@ -374,6 +374,30 @@ POLY = (function() {
 	return [node];
     }
 
+    // Returns a list of nodes split up into factors, by 
+    // separating the original tree at * operations.  If a non-numeric
+    // entity is negated, then -1 is split off as a separate factor.
+    function get_factors(node) {
+	if (node.operator === '*') {
+	    var left = get_factors(node.left);
+	    var right = get_factors(node.right);
+	    left.push.apply(left, right);
+	    return left;
+	}
+	if (node.operator === 'NEGATION') {
+	    if (node.child.type === 'NUMBER') {
+		return [node];
+	    } else {
+		// Create a -1 factor to represent the negation.
+		var left = [ {type: 'NUMBER', value: -1} ]; 
+		var right = get_factors(node.child);
+		left.push.apply(left, right);
+		return left;
+	    }
+	}
+	return [node];
+    }
+
     // Can also check x % 1 === 0.
     // Not sure which is faster.
     function is_integer(x) {
@@ -576,7 +600,68 @@ POLY = (function() {
 	// Passed the gauntlet of tests.
 	return true;
     }
-    
+
+    // Returns true if the give expression node represents the factor^exponent.
+    // factor should be passed in as a vector poly in the form [3, 1] for (x+3)
+    // exponent is the integer power.
+    function nodeEqualsFactor(node, factor, exponent) {
+	if (node.operator === '^') {
+	    // Check that exponent is correct
+	    if (node.right.type !== 'NUMBER') return false;
+	    if (node.right.value !== exponent) return false;
+	    node = node.left
+	} else {
+	    // There was no exponent, so make sure that
+	    // it was supposed to be 1.
+	    if (exponent !== 1) return false;
+	}
+	// Now check that the factor itself is correct.
+	if (!is_polynomial(node)) return false;
+	if (!is_simplified_polynomial(node)) return false;
+	return arrayEquals(factor, get_polynomial_coefficients(node));
+    }
+
+    // Returns true if the given input expression (a string like "2/3(x-4)^2(x+1)")
+    // represents a polynomial in complete factored form.
+    // factors is an array of linear factors in vector form e.g. [3, 1].
+    // exponents is an array of factor exponents.
+    function isFactoredForm(input, a, factors, exponents) {
+	try { 
+	    var postfix = parse(input);
+	    var node = tree_from_postfix(postfix);
+	} catch (exception) {
+	    return false;
+	}
+
+	var inputFactors = get_factors(node);
+	var f = inputFactors[0];
+	// Check for leading coefficient
+	if (f.type === 'NUMBER' || f.operator === '/' || f.operator === 'NEGATION') {
+	    var coeff = get_simplified_coefficient(f);
+	    if (!coeff) return false;
+	    if (!arrayEquals(coeff, a)) return false;
+	    inputFactors.shift();  // remove coefficient node from factors list.
+	} else {
+	    // If there wasn't a node for the leading coefficient as the
+	    // first factor, then make sure that the leading coefficient is 1.
+	    if (!arrayEquals(a, [1,1])) return false;
+	}
+
+	if (inputFactors.length !== factors.length) return false;
+
+	function matchFactor(f, e) {
+	    for (var i = 0, len = inputFactors.length; i < len; i++) {
+		if (nodeEqualsFactor(inputFactors[i], f, e)) return true;
+	    }
+	    return false;
+	}
+
+	for (var i = 0, len = factors.length; i < len; i++) {
+	    if (!matchFactor(factors[i], exponents[i])) return false;
+	}
+	return true;
+    }
+
     // A shallow equality test for arrays.  Returns true only if
     // the first level items in both arrays are identically equal.
     function arrayEquals(a, b) {
@@ -609,7 +694,8 @@ POLY = (function() {
 	is_simplified_polynomial: is_simplified_polynomial,
 	equals_simplified_polynomial: equals_simplified_polynomial,
 	gcd: gcd,
-	is_simplified_vertex_form: is_simplified_vertex_form
+	is_simplified_vertex_form: is_simplified_vertex_form,
+	isFactoredForm: isFactoredForm,
     };
 
 })();
