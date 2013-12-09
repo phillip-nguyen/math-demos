@@ -99,7 +99,7 @@
 	  }
 	  // Find a safe value for the initial guess.
 	  // All solutions must lie between -r and r.
-	  var r = 1 + Math.max(Math.abs(a), Math.abs(b), Math.abs(c));
+	  var r = 1 + Math.max(Math.abs(b/a), Math.abs(c/a), Math.abs(d/a));
 	  // Find the inflection point.
 	  var xinfl = -b/3;
 	  // Determine if cubic is headed up or down at inflection.
