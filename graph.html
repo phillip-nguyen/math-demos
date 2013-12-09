@@ -101,10 +101,17 @@
 	  // All solutions must lie between -r and r.
 	  var r = 1 + Math.max(Math.abs(b/a), Math.abs(c/a), Math.abs(d/a));
 	  // Find the inflection point.
-	  var xinfl = -b/3;
-	  // Determine if cubic is headed up or down at inflection.
+	  var xinfl = -b/(3*a);
+	  // We use the sign of f(xinfl) to determine whether or not to start
+	  // the search from the left (-r) or the right (+r) side.  Our goal
+	  // is to make sure that the root-finding method won't encounter any
+	  // critical points before it reaches its first zero.
+	  // Let z1, z2, z3 be potential roots, and c1, c2, be critical points.
+	  // Assume a > 0.  If f(xinfl) is positive, then we may be certain 
+	  // that -r < z1 < c1 < xinfl.  On the other hand if f(xinfl) is negative,
+	  // then we know xinfl < c2 < z2.  If a < 0, this is all reversed.
 	  var df = a*xinfl*xinfl*xinfl + b*xinfl*xinfl + c*xinfl + d;
-	  var x0 = (df <= 0) ? r : -r;
+	  var x0 = (a*df <= 0) ? r : -r;
 
 	  // Use Halley's method to find the first root, starting with a guess of x0.
 	  var z1 = halley_cubic(x0, a, b, c, d);
