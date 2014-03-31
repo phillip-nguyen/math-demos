@@ -1,5 +1,5 @@
 // POLY.js module
-// Copyright 2013 Phillip Nguyen.
+// Copyright 2014 Phillip Nguyen.
 // All rights reserved.
 //
 // This module exposes some methods for parsing polynomial expressions
@@ -277,8 +277,8 @@ POLY = (function() {
     // Given two vectors p and q represented in vector form, returns 
     // their product p*q also as a vector.  The following example shows what 
     // the algorithm does:
-    // p = [1 0 2 4]
-    // q = [3 1 5]
+    // p = [1 0 2 4]  (represents 1 + 2x^2 + 4x^3)
+    // q = [3 1 5]    (represents 3 + x + 5x^2)
     // p * q = [1*3, 1*1 + 0*3, 1*5 + 0*1 + 2*3, 0*5 + 2*1 + 4*3, 2*5 + 4*1, 4*5]
     function mul_poly(p, q) {
 	var result = [];
@@ -503,6 +503,41 @@ POLY = (function() {
 	return 0;
     }
 
+    // Returns true if the given input parses as an exponential
+    // function written in the form coeff*base^x.
+    // Both coeff and base are assumed to be decimal numbers.
+    function is_simplified_exponential(input, coeff, base) {
+	try {
+	    var postfix = parse(input);
+	    var node = tree_from_postfix(postfix);
+	} catch (exception) {
+	    return false;
+	}
+
+	// Check for multiplication
+	if (node.operator !== '*') {
+	    // If there was no multiplication node, it's possible that
+	    // it was omitted because the coefficient was 1.
+	    if (coeff !== 1) return false;
+	} else {
+	    // Check that coefficient is correct.
+	    if (node.left.type !== 'NUMBER') return false;
+	    if (node.left.value !== coeff) return false;
+	    node = node.right;
+	}
+
+	// Check for exponent.
+	if (node.operator !== '^') return false;
+	// Check for correct base.
+	if (node.left.type !== 'NUMBER') return false;
+	if (node.left.value !== base) return false;
+	// Check that exponent is an x.
+	if (node.right.type !== 'VARIABLE') return false;
+
+	// Passed the gauntlet of tests.
+	return true;
+    }
+
     // Returns true if the given parse tree represents a polynomial expression
     // in simplified form, meaning 
     // (1) all coefficients and exponents have been simplified and reduced 
@@ -623,6 +658,7 @@ POLY = (function() {
 
     // Returns true if the given input expression (a string like "2/3(x-4)^2(x+1)")
     // represents a polynomial in complete factored form.
+    // a is the leading coefficient as a rational number in the form [p, q].
     // factors is an array of linear factors in vector form e.g. [3, 1].
     // exponents is an array of factor exponents.
     function isFactoredForm(input, a, factors, exponents) {
@@ -689,6 +725,62 @@ POLY = (function() {
 	}
     }
 
+    // Returns true if the given input expression is a rational number
+    // represented in lowest terms and equal to r = [p, q]
+    function equals_simplified_rational(input, r) {
+	try {
+	    var postfix = parse(input);
+	    var node = tree_from_postfix(postfix);
+	    var coeff = get_simplified_coefficient(node);
+	    return (coeff && arrayEquals(coeff, r));
+	} catch (exception) {
+	    return false;
+	}
+    }
+
+
+    function signCharacter(x, leadingTerm) {
+	if (x < 0) {
+	    return '&#8722;';
+	} else if (leadingTerm) {
+	    return '';
+	} else {
+	    return '+';
+	}
+    }
+
+    // Returns HTML code for nice looking version of polynomial.
+    function toHtml(p) {
+	var html = '';
+	var degree = p.length - 1;
+	var firstTerm = true;
+	for (var i = degree; i >= 0; i--) {
+	    var coeff = p[i];
+	    if (coeff === 0) {
+		if (firstTerm && i === 0) {
+		    html += "0";
+		}
+		continue;
+	    }
+	    if (firstTerm) {
+		html += signCharacter(coeff, firstTerm);
+		firstTerm = false;
+	    } else {
+		html += " " + signCharacter(coeff) + " ";
+	    }
+	    if (Math.abs(coeff) !== 1 || i === 0) {
+		html += Math.abs(coeff);
+	    }
+	    if (i !== 0) {
+		html += "<i>x</i>";
+	    } 
+	    if (i > 1) {
+		html += "<sup>" + i + "</sup>";
+	    }
+	}
+	return html;
+    }	  
+
     return { 
 	degree: polynomial_degree,
 	is_simplified_polynomial: is_simplified_polynomial,
@@ -696,6 +788,11 @@ POLY = (function() {
 	gcd: gcd,
 	is_simplified_vertex_form: is_simplified_vertex_form,
 	isFactoredForm: isFactoredForm,
+	toHtml: toHtml,
+	signCharacter: signCharacter,
+	multiply: mul_poly,
+	equals_simplified_rational: equals_simplified_rational,
+	is_simplified_exponential: is_simplified_exponential,
     };
 
 })();
