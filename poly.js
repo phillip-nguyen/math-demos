@@ -538,6 +538,82 @@ POLY = (function() {
 	return true;
     }
 
+    function float_equals(a, b) {
+	return Math.abs(a - b) < 1e-10;
+    }
+
+    // Returns true if the given input parses as k*x^n,
+    // where k is a decimal number and n is typically a whole number,
+    // but is not required to be for greater generality.
+    function is_simplified_direct_variation(input, k, n) {
+	try {
+	    var postfix = parse(input);
+	    var node = tree_from_postfix(postfix);
+	} catch (exception) {
+	    return false;
+	}
+
+	// Check for multiplication
+	if (node.operator !== '*') {
+	    // If there was no multiplication node, it's possible that
+	    // it was omitted because k was 1.
+	    if (k !== 1) return false;
+	} else {
+	    // Check that coefficient is equal to k.
+	    if (node.left.type !== 'NUMBER') return false;
+	    if (!float_equals(node.left.value, k)) return false;
+	    node = node.right;
+	}
+
+	// Check for exponent.
+	if (node.operator !== '^') {
+	    // If n is 1, then perhaps exponent was omitted.
+	    return (n === 1 && node.type === 'VARIABLE');
+	}
+	// Check that base is a variable.
+	if (node.left.type !== 'VARIABLE') return false;
+	// Check that exponent is n.
+	if (node.right.type !== 'NUMBER') return false;
+	if (node.right.value !== n) return false;
+
+	// Passed the gauntlet of tests.
+	return true;
+    }
+
+    // Returns true if the given input parses as k/x^n,
+    // where k is a decimal number and n is typically a whole number,
+    // but is not required to be for greater generality.
+    function is_simplified_inverse_variation(input, k, n) {
+	try {
+	    var postfix = parse(input);
+	    var node = tree_from_postfix(postfix);
+	} catch (exception) {
+	    return false;
+	}
+
+	// Check for division.
+	if (node.operator !== '/') return false;
+	// Check that numerator is equal to k.
+	if (node.left.type !== 'NUMBER') return false;
+	if (!float_equals(node.left.value, k)) return false;
+	node = node.right;
+
+	// Check for exponent.
+	if (node.operator !== '^') {
+	    // If n is 1, then perhaps exponent was omitted.
+	    return (n === 1 && node.type === 'VARIABLE');
+	}
+	// Check that base is a variable.
+	if (node.left.type !== 'VARIABLE') return false;
+	// Check that exponent is n.
+	if (node.right.type !== 'NUMBER') return false;
+	if (node.right.value !== n) return false;
+
+	// Passed the gauntlet of tests.
+	return true;
+    }
+
+
     // Returns true if the given parse tree represents a polynomial expression
     // in simplified form, meaning 
     // (1) all coefficients and exponents have been simplified and reduced 
@@ -793,6 +869,8 @@ POLY = (function() {
 	multiply: mul_poly,
 	equals_simplified_rational: equals_simplified_rational,
 	is_simplified_exponential: is_simplified_exponential,
+	is_simplified_direct_variation: is_simplified_direct_variation,
+	is_simplified_inverse_variation: is_simplified_inverse_variation,
     };
 
 })();
