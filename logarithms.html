@@ -127,6 +127,7 @@
       }
     </style>
   
+    <script src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
     <script src="http://ajax.googleapis.com/ajax/libs/jquery/2.0.0/jquery.min.js"></script>
     <script type="text/javascript">
       "use strict";
@@ -155,9 +156,9 @@
 			[2, "-1/2", htmlFraction(1, htmlRoot(2))],
 			[2, "-1/3", htmlFraction(1, htmlRoot(2, 3))],
 			[2, "-1/4", htmlFraction(1, htmlRoot(2, 4))],
-			["e", 0, 1], ["e", 1, "e"], ["e", 50, "e<sup><small>50</small></sup>"],
+			["e", 0, 1], ["e", 1, "e"], ["e", 50, "e^{50}"],
 			["e", "1/2", htmlRoot("e")], ["e", "1/3", htmlRoot("e", 3)],
-			["e", -1, htmlFraction(1, "e")], ["e", -7, htmlFraction(1, "e<sup><small>7</small></sup>")],
+			["e", -1, htmlFraction(1, "e")], ["e", -7, htmlFraction(1, "e^{7}")],
 			["e", "-1/2", htmlFraction(1, htmlRoot("e"))], 
 			["e", "-1/3", htmlFraction(1, htmlRoot("e", 3))], 
 			["e", "-1/4", htmlFraction(1, htmlRoot("e", 4))], 
@@ -167,10 +168,11 @@
 			[3, "1/2", htmlRoot(3)], [3, "1/3", htmlRoot(3, 3)],
 			[3, "-1/2", htmlFraction(1, htmlRoot(3))],
 			[3, "3/2", htmlRoot(27)], [3, "3/4", htmlRoot(27, 4)],
-			["&pi;", 0, 1],
-			["&pi;", 1, "&pi;"],
-			["&pi;", 13, "&pi;<sup><small>13</small></sup>"],
-			["&pi;", -22, htmlFraction(1, "&pi;<sup><small>22</small></sup>")],
+			["\\pi", 0, 1],
+			["\\pi", 1, "\\pi"],
+			["\\pi", 13, "\\pi^{13}"],
+			["\\pi", -22, htmlFraction(1, "\\pi^{22}")],
+			["\\pi", "-1/5", htmlFraction(1, htmlRoot("\\pi", 5))],
 			[4, 0, 1], [4, 1, 4], [4, 2, 16], [4, 3, 64], [4, "1/2", 2],
 			[5, 0, 1], [5, 1, 5], [5, 2, 25], [5, 3, 125],
 			[5, -3, htmlFraction(1, 125)],
@@ -200,39 +202,26 @@
       }
 
       function htmlRoot(x, n) {
-	  var html = '<span style="display: inline-block; margin-top: 5px;">';
 	  if (!n || n === 2) {
-	      html += '<span class="squareRoot">&#8730;</span><span class="radicand">'+x+'</span>';
-	  } else if (n === 3) {
-	      html += '<span class="cubeRoot">&#8731;</span><span class="radicand">'+x+'</span>';
-	  } else if (n === 4) {
-	      html += '<span class="fourthRoot">&#8732;</span><span class="radicand">'+x+'</span>';
+	      return "\\sqrt{"+x+"}";
+	  } else {
+	      return "\\sqrt["+n+"]{"+x+"}";
 	  }
-	  html += '</span>';
-	  return html;
       }
 
       function htmlFraction(numer, denom) {
-	  var html = '<span class="fraction">'
-	      + '<span class="numer">' + numer + '</span>'
-	      + '<span class="denom">' + denom + '</span>'
-	      + '</span>'
-	  return html;
+	  return "\\frac{"+numer+"}{"+denom+"}";
       }
 
       function htmlLog(x, base) {
-	  var html;
 	  if (base === "e") {
-	      html = 'ln';
+	      return "\\(\\ln\\left("+x+"\\right)\\)";
 	  } else if (!base || base === 10) {
-	      html = 'log';
+	      return "\\(\\log\\left("+x+"\\right)\\)";
 	  } else {
-	      html = 'log<sub><small>'+base+'</small></sub>'
+	      return "\\(\\log_{"+base+"}\\left("+x+"\\right)\\)";	      
 	  }
-	  html += '<span class="parens">(</span>' + x + '<span class="parens">)</span>';
-	  return html;
       }
-      
       
       function checkStep(step) {
 	  if (isPartiallyBlankStep(step)) {
@@ -344,6 +333,7 @@
 		      + ' <span id="step1-grade"></span>'
 		      + '</li>'
 	      );
+	      MathJax.Hub.Queue(["Typeset", MathJax.Hub, "step1"]);
 	  },
 
 	  checkAnswers: function() {
@@ -370,6 +360,7 @@
 		      + ' <span id="step2-grade"></span>'
 		      + '</li>'
 	      );
+	      MathJax.Hub.Queue(["Typeset", MathJax.Hub, "step2"]);
 	  },
 
 	  checkAnswers: function() {
@@ -396,6 +387,7 @@
 		      + ' <span id="step3-grade"></span>'
 		      + '</li>'
 	      );
+	      MathJax.Hub.Queue(["Typeset", MathJax.Hub, "step3"]);
 	  },
 
 	  checkAnswers: function() {
@@ -422,6 +414,7 @@
 		      + ' <span id="step4-grade"></span>'
 		      + '</li>'
 	      );
+	      MathJax.Hub.Queue(["Typeset", MathJax.Hub, "step4"]);
 	  },
 
 	  checkAnswers: function() {
@@ -448,6 +441,7 @@
 		      + ' <span id="step5-grade"></span>'
 		      + '</li>'
 	      );
+	      MathJax.Hub.Queue(["Typeset", MathJax.Hub, "step5"]);
 	  },
 
 	  checkAnswers: function() {
@@ -485,7 +479,7 @@
       Logarithm Lightning Round!<br>
       Evaluate each of the following logarithms:
     </div>
-    
+   
     <ol id="walkthrough">  
     </ol>
 
