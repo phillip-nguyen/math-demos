@@ -182,6 +182,35 @@ var MATH = (function() {
 	return r[0] / r[1];
     }
 
+
+    // Parses a string representing a rational number into 
+    // an object of the form [p, q].
+    // Special cases:
+    // If str represents an integer value, then return [p, 1] where p is an integer.
+    // If str is a decimal, then returns [r, 1] where r is a real number
+    // If str is a decimal / decimal then divides and returns [r, 1]
+    function parse_rational(str) {
+	var r = str.split('/');
+	var p, q;
+	if (r.length === 1) {
+	    if (r[0] === "") return false;
+	    p = Number(r[0]);
+	    if (isNaN(p)) return false;
+	    return [p, 1]; // p may be a decimal number.
+	} else if (r.length === 2) {
+	    if (r[0] === "" || r[1] === "") return false;
+	    p = Number(r[0]);
+	    q = Number(r[1]);
+	    if (isNaN(p) || isNaN(q)) return false;
+	    if (is_integer(p) && is_integer(q)) {
+		return [p, q];
+	    } else {
+		return [p/q, 1];
+	    }
+	}
+	return false;
+    }
+
     my.divisors = get_divisors;
     //my.prime_factors = prime_factors;
     //my.least_factor = least_factor;
@@ -200,6 +229,7 @@ var MATH = (function() {
     my.rat_real = rat_real;
 
     my.is_integer = is_integer;
+    my.parse_rational = parse_rational;
 
     return my;
 }());
