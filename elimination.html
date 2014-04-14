@@ -83,7 +83,8 @@
 	  background-color: #51a027;
 	  color: black;
 	  box-shadow: 0px 6px 8px #888888;
-	  margin-left: 130px;
+	  margin-left: 20px;
+	  margin-right: 20px;
       }.gobutton:hover {
 	  border: 4px solid green;
 	  background-color: #41d027;
@@ -102,12 +103,70 @@
 	  position:relative;
 	  top: 0px;
       }
+      .undobutton {
+	  display: inline-block;
+	  border: 4px solid black;
+	  border-radius: 30px;
+	  font-family: Arial, Helvetica, "sans-serif";
+	  font-size: 20px;
+	  font-weight: bold;
+	  font-style: normal;
+	  height: 40px;
+	  width: 180px;
+	  text-decoration: none;
+	  text-align: center;
+	  background-color: #d04137;
+	  color: black;
+	  box-shadow: 0px 6px 8px #888888;
+	  margin-left: 20px;
+	  margin-right: 20px;
+      }.undobutton:hover {
+	  border: 4px solid #c00000;
+	  background-color: red;
+	  text-shadow: 0px 0px 8px #ffaaaa;
+	  color: #ffaaaa;
+      }.undobutton:active {
+	  box-shadow: 0px 1px 5px #888888;
+	  position:relative;
+	  top:5px;
+      }.undobutton[disabled] { 
+	  border: 4px solid gray;
+	  background-color: #c0c0c0;
+	  text-shadow: none;
+	  color: gray;
+	  box-shadow: none;
+	  position:relative;
+	  top: 0px;
+      }
       .matrix {
 	  font-size: 32px;
 	  margin-left: 15px;
 	  margin-right: 80px;
 	  margin-top: 40px;
 	  margin-bottom: 10px;
+      }
+      .leftbracket, .rightbracket {
+	  border-top: 3px solid black;
+	  border-bottom: 3px solid black;
+	  height: 150px;
+	  width: 10px;
+	  display: inline-block;
+	  vertical-align: middle;
+      }
+      .leftbracket { border-left: 5px solid black; }
+      .rightbracket { border-right: 5px solid black; }
+      .matrixinput {
+	  font-size: 24px;
+	  width: 100px;
+	  text-align: center;
+      }
+      .vline {
+	  border-left: 3px solid black;
+	  height: 150px;
+	  width: 0px;
+	  display: inline-block;
+	  vertical-align: middle;
+	  margin: 0px 10px;
       }
     </style>
 
@@ -121,6 +180,7 @@
       // All rights reserved.
 
       var the_matrix;
+      var matrix_queue = [];
 
       function randInt(min, max) {
 	  return Math.floor(Math.random() * (max - min + 1)) + min;
@@ -145,12 +205,13 @@
 	      return (a !== b);
 	  } else if (which === "scale") {
 	      // Make sure that the scale factor is not zero or invalid.
-	      var a = Number($("#scale"+n+'-a').text());
-	      return (a !== 0 && !isNaN(a));
+	      var a = MATH.rat_fromstring($("#scale"+n+'-a').text());
+	      if (!a || a[0] === 0) return false;
+	      return true;
 	  } else if (which === "addmult") {
 	      // Make sure that the scale factor is not zero or invalid.
-	      var a = Number($("#addmult"+n+'-a').text());
-	      if (a === 0 || isNaN(a)) return false;
+	      var a = MATH.rat_fromstring($("#addmult"+n+'-a').text());
+	      if (!a || a[0] === 0) return false;
 	      // Make sure that we're adding different rows.
 	      var b = $("#addmult"+n+'-b').val(), c = $("#addmult"+n+'-c').val();
 	      return (b !== c);
@@ -158,11 +219,7 @@
       }
 
       function validateRowOp(n) {
-	  if (isValidRowOp(n)) {
-	      $("#gobutton"+n).prop("disabled", false);
-	  } else {
-	      $("#gobutton"+n).prop("disabled", true);
-	  }
+	  $("#gobutton"+n).prop("disabled", !isValidRowOp(n));
       }
 
       function rowSelectHtml(id) {
@@ -234,17 +291,20 @@
 	  // 3. A placeholder div for the eventual resulting matrix, but which
 	  //    initially contains a submit button.
 	  $("#elimination").append(
-	      '<li><select id="rowOpSelect'+n+'">'
-		  + '<option value="swap">Swap two rows</option>'
-		  + '<option value="scale">Multiply a row by a nonzero number</option>'
+	      '<li id="step'+n+'"><select id="rowOpSelect'+n+'">'
 		  + '<option value="addmult">Add a multiple of one row to another</option>'
+		  + '<option value="scale">Multiply a row by a nonzero number</option>'
+		  + '<option value="swap">Swap two rows</option>'
 		  + '</select><p>'
 		  + '<div id="rowop'+n+'"></div><p>'
-		  + '<div id="result'+n+'"><input id="gobutton'+n+'" type="button" class="gobutton" value="Go!"></div>'
+		  + '<div id="result'+n+'">'
+		  + '<input id="gobutton'+n+'" type="button" class="gobutton" value="Go!">'
+		  + (n>1 ? ('<input id="undobutton'+n+'" type="button" class="undobutton" value="Undo Last Step">') : '')
+		  + '</div>'
 		  + '</li>'
 	  );
-	  // The default selected row operation is a row swap.
-	  createSwapRowOp(n);
+	  // The default selected row operation is add multiple.
+	  createAddMultRowOp(n);
 	  // When the select changes, we need to make sure that row op
 	  // parameters also change appropriately.
 	  $("#rowOpSelect"+n).change(function() {
@@ -257,12 +317,26 @@
 	  // row operation and show the new matrix.  Then we start
 	  // on the next step.
 	  $("#gobutton"+n).click(function() {
-	      performStep(n);
+	      the_matrix = performStep(n);
+	      matrix_queue.push(the_matrix);
 	      disableStep(n);
 	      $("#result"+n).html(MATRIX.typeset(the_matrix)).addClass("matrix");
 	      MathJax.Hub.Queue(["Typeset", MathJax.Hub, "result"+n]);
 	      addNewStep(n+1);
 	  });
+	  $("#undobutton"+n).click(function() {
+	      undoStep(n);
+	  });
+      }
+
+      function undoStep(n) {
+	  if (n === 1) return;
+	  // Revert to the previous matrix.
+	  $("#step"+n).remove();
+	  $("#step"+(n-1)).remove();
+	  matrix_queue.pop();
+	  the_matrix = matrix_queue[matrix_queue.length-1];
+	  addNewStep(n-1);
       }
 
       function disableStep(n) {
@@ -287,18 +361,76 @@
 	  if (which === "swap") {
 	      var i = Number($("#swap"+n+'-a').val());
 	      var j = Number($("#swap"+n+'-b').val());
-	      the_matrix = MATRIX.swapRows(the_matrix, i, j);
+	      return MATRIX.swapRows(the_matrix, i, j);
 	  } else if (which === "scale") {
-	      var k = Number($("#scale"+n+'-a').text());
+	      var k = MATH.rat_fromstring($("#scale"+n+'-a').text());
 	      var i = Number($("#scale"+n+'-b').val());
-	      the_matrix = MATRIX.scaleRow(the_matrix, i, k);
+	      return MATRIX.scaleRow(the_matrix, i, k);
 	  } else if (which === "addmult") {
-	      var k = Number($("#addmult"+n+'-a').text());
+	      var k = MATH.rat_fromstring($("#addmult"+n+'-a').text());
 	      var i = Number($("#addmult"+n+'-b').val());
 	      var j = Number($("#addmult"+n+'-c').val());
-	      the_matrix = MATRIX.addMultiple(the_matrix, k, i, j); 
+	      return MATRIX.addMultiple(the_matrix, k, i, j); 
 	  }
       }
+
+      function subMatrix(nrows, col1, col2) {
+	  var html = '<table style="display:inline-block; vertical-align:middle; border-spacing: 5px;">';
+	  var rows = [];
+	  var ncols = col2-col1+1;
+	  for (var i=1; i <= nrows; i++) {
+	      var row = new Array(ncols);
+	      for (var j=col1; j <= col2; j++) {
+		  row[j] = '<td><input type="text" class="matrixinput" id="entry'+i+j+'"></td>';
+	      }
+	      rows.push('<tr>'+row.join('')+'</tr>');
+	  }
+	  html += rows.join('');
+	  html += '</table>';
+	  return html;
+      }
+
+      // Creates an HTML table filled with input textfields and set with
+      // brackets to look like matrix.  
+      // nrows is the total number of rows in the table.
+      // ncols is the total number of columns.
+      // augm specifies the column number after which a vertical line will be drawn.
+      // if augm is not given or falsey, then no vertical line will be drawn.
+      // Each input box of the matrix is given an id like "entry32".
+      function inputMatrix(nrows, ncols, augm) {
+	  var html = '<div class="leftbracket"></div>';
+	  html += '<table style="display:inline-block; vertical-align:middle;">';
+	  html += subMatrix(nrows, 1, (augm || ncols));
+	  if (augm) {
+	      html += '<div class="vline"></div>';
+	      html += subMatrix(nrows, augm+1, ncols);
+	  }
+	  html += '<div class="rightbracket"></div>'
+	  return html;
+      }
+
+      function readMatrix(nrows, ncols) {
+	  var m = [];
+	  for (var i = 1; i <= nrows; i++) {
+	      var row = [];
+	      for (var j = 1; j <= ncols; j++) {
+		  row.push(MATH.rat_fromstring($("#entry"+i+j).val()));
+	      }
+	      m.push(row);
+	  }
+	  return m;
+      }
+
+      function isValidInputMatrix(nrows, ncols) {
+	  for (var i = 1; i <= nrows; i++) {
+	      for (var j = 1; j <= ncols; j++) {
+		  var txt = $("#entry"+i+j).val();
+		  if (!txt || !MATH.rat_fromstring(txt)) return false;
+	      }
+	  }
+	  return true;
+      }
+
 
     </script>
   </head>
@@ -308,12 +440,23 @@
       Gaussian Elimination Helper
     </div>
    
-    <div id="matrix" style="font-size: 32px; margin-left: 55px; margin-right: 80px;">
+    <p>
+
+    <div id="matrix" style="display:inline-block;"></div>
+
+    <p>
+
+    <div id="begin">
+      <input id="beginbutton" type="button" class="gobutton" value="Begin" disabled=true>
     </div>
     
     <ol id="elimination">  
     </ol>
 
+    <p>&nbsp;
+
+      
+    
     <script type="text/javascript">
       $(function() {
 	  // Some code to force contenteditable to trigger 'change' events.
@@ -331,11 +474,24 @@
 	      return $this;
 	  });
 
-	  the_matrix = MATRIX.randMatrix(3,4);
-	  $("#matrix").html(MATRIX.typeset(the_matrix));
-	  MathJax.Hub.Queue(["Typeset", MathJax.Hub, "matrix"]);
-	  addNewStep(1);
-      
+	  //the_matrix = MATRIX.randMatrix(3,4);
+	  //matrix_queue.push(the_matrix);
+	  //$("#matrix").html(MATRIX.typeset(the_matrix));
+	  //MathJax.Hub.Queue(["Typeset", MathJax.Hub, "matrix"]);
+	  //addNewStep(1);      
+
+	  $("#matrix").html(inputMatrix(3,4,3));
+	  $(".matrixinput").change(function() {
+	      $("#beginbutton").prop('disabled', !isValidInputMatrix(3,4));
+	  });
+	  $("#beginbutton").click(function() {
+	      the_matrix = readMatrix(3, 4);
+	      matrix_queue.push(the_matrix);
+	      addNewStep(1);
+	      $(".matrixinput").prop('readonly', true);
+	      $(this).remove();
+	  });
+
       });
     </script>
 

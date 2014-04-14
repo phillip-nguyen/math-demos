@@ -178,10 +178,17 @@ var MATH = (function() {
 	return rat_simplify([k*r[0], r[1]]);
     }
 
+    // Returns real number decimal version of rational r = [p, q].
     function rat_real(r) {
 	return r[0] / r[1];
     }
 
+    function rat_typeset(r) {
+	if (r[1] === 1) return (r[0]).toString(10);
+	if (r[1] === -1) return (-r[0]).toString(10);
+	var sign = (r[0]*r[1] < 0) ? "-" : "";
+	return sign + "\\frac{"+Math.abs(r[0])+"}{"+Math.abs(r[1])+"}";
+    }
 
     // Parses a string representing a rational number into 
     // an object of the form [p, q].
@@ -189,7 +196,7 @@ var MATH = (function() {
     // If str represents an integer value, then return [p, 1] where p is an integer.
     // If str is a decimal, then returns [r, 1] where r is a real number
     // If str is a decimal / decimal then divides and returns [r, 1]
-    function parse_rational(str) {
+    function rat_fromstring(str) {
 	var r = str.split('/');
 	var p, q;
 	if (r.length === 1) {
@@ -201,7 +208,7 @@ var MATH = (function() {
 	    if (r[0] === "" || r[1] === "") return false;
 	    p = Number(r[0]);
 	    q = Number(r[1]);
-	    if (isNaN(p) || isNaN(q)) return false;
+	    if (isNaN(p) || isNaN(q) || q === 0) return false;
 	    if (is_integer(p) && is_integer(q)) {
 		return [p, q];
 	    } else {
@@ -229,7 +236,8 @@ var MATH = (function() {
     my.rat_real = rat_real;
 
     my.is_integer = is_integer;
-    my.parse_rational = parse_rational;
+    my.rat_typeset = rat_typeset;
+    my.rat_fromstring = rat_fromstring;
 
     return my;
 }());

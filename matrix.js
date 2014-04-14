@@ -1,22 +1,23 @@
 var MATRIX = (function() {
 
-    function dupe(m) {
-	var copy = [];
-	for (var i = 0, len = m.length; i < len; i++) {
-	    copy[i] = m[i].slice(0);
-	}
-	return copy;
+    // Use jQuery to return a deep copy of m.
+    function deepCopy(m) {
+	return $.extend(true, [], m);
     }
 
-    // Multiplies row i of matrix m by the scalar value k.
+    // Multiplies row i of matrix m by the *rational* value k = [p, q].
+    // May also pass in a scalar decimal k.
     // Returns a new matrix with the result.  Matrix m is unchanged.
     function scaleRow(m, i, k) {
 	i -= 1;
 	if (m[i] === undefined) return undefined;
-	var copy = dupe(m);
+	if (typeof(k) === "number") {
+	    k = [k, 1];
+	}
+	var copy = deepCopy(m);
 	var row = copy[i];
 	for (var n = 0, len = row.length; n < len; n++) {
-	    row[n] *= k;
+	    row[n] = MATH.rat_mul(row[n], k);
 	}
 	return copy;
     }
@@ -28,7 +29,7 @@ var MATRIX = (function() {
 	i -= 1;
 	j -= 1;
 	if (m[i] === undefined || m[j] === undefined) return undefined;
-	var copy = dupe(m);
+	var copy = deepCopy(m);
 	var temp = copy[i];
 	copy[i] = copy[j];
 	copy[j] = temp;
@@ -40,11 +41,11 @@ var MATRIX = (function() {
 	i -= 1;
 	j -= 1;
 	if (m[i] === undefined || m[j] === undefined) return undefined;
-	var copy = dupe(m);
+	var copy = deepCopy(m);
 	row1 = copy[i];
 	row2 = copy[j];
 	for (var n = 0, len = row1.length; n < len; n++) {
-	    row2[n] += k*row1[n];
+	    row2[n] = MATH.rat_add(row2[n], MATH.rat_mul(row1[n], k));
 	}
 	return copy;
     }
@@ -68,7 +69,9 @@ var MATRIX = (function() {
 	    + '|r}';
 	var rows = [];
 	for (var i=0, len=numRows(m); i < len; i++) {
-	    rows.push(m[i].join('&'));
+	    rows.push($.map(m[i], function(x,index) {
+		return MATH.rat_typeset(x);
+	    }).join('&'));
 	}
 	html += rows.join('\\\\');
 	html += '\\end{array}\\right]'
@@ -85,7 +88,7 @@ var MATRIX = (function() {
 	for (var i = 0; i < nrows; i++) {
 	    var row = [];
 	    for (var j = 0; j < ncols; j++) {
-		row.push(randInt(-9, 9));
+		row.push([randInt(-9, 9), 1]);
 	    }
 	    m.push(row);
 	}
