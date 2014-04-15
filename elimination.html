@@ -148,25 +148,23 @@
       .leftbracket, .rightbracket {
 	  border-top: 3px solid black;
 	  border-bottom: 3px solid black;
-	  height: 150px;
 	  width: 10px;
 	  display: inline-block;
 	  vertical-align: middle;
       }
       .leftbracket { border-left: 5px solid black; }
       .rightbracket { border-right: 5px solid black; }
+      .vline {
+	  border-left: 3px solid black;
+	  width: 0px;
+	  margin: 0px 10px;
+	  display: inline-block;
+	  vertical-align: middle;
+      }
       .matrixinput {
 	  font-size: 24px;
 	  width: 100px;
 	  text-align: center;
-      }
-      .vline {
-	  border-left: 3px solid black;
-	  height: 150px;
-	  width: 0px;
-	  display: inline-block;
-	  vertical-align: middle;
-	  margin: 0px 10px;
       }
     </style>
 
@@ -179,7 +177,7 @@
       // Copyright 2014 Phillip Nguyen.
       // All rights reserved.
 
-      var the_matrix;
+      var theMatrix = {data: null, nrows: 0, ncols: 0, augm: false};
       var matrix_queue = [];
 
       function randInt(min, max) {
@@ -224,7 +222,7 @@
 
       function rowSelectHtml(id) {
 	  var html = '<select id="'+id+'">';
-	  for (var i = 0, len=MATRIX.numRows(the_matrix); i < len; i++) {
+	  for (var i = 0, len=MATRIX.numRows(theMatrix.data); i < len; i++) {
 	      var rowName = "R"+(i+1);
 	      html += '<option value="'+(i+1)+'">'+rowName+'</option>';
 	  }
@@ -317,10 +315,10 @@
 	  // row operation and show the new matrix.  Then we start
 	  // on the next step.
 	  $("#gobutton"+n).click(function() {
-	      the_matrix = performStep(n);
-	      matrix_queue.push(the_matrix);
+	      theMatrix = {data: performStep(n), nrows: theMatrix.nrows, ncols: theMatrix.ncols, augm: theMatrix.augm};
+	      matrix_queue.push(theMatrix);
 	      disableStep(n);
-	      $("#result"+n).html(MATRIX.typeset(the_matrix)).addClass("matrix");
+	      $("#result"+n).html(MATRIX.typeset(theMatrix.data, theMatrix.augm)).addClass("matrix");
 	      MathJax.Hub.Queue(["Typeset", MathJax.Hub, "result"+n]);
 	      addNewStep(n+1);
 	  });
@@ -335,7 +333,7 @@
 	  $("#step"+n).remove();
 	  $("#step"+(n-1)).remove();
 	  matrix_queue.pop();
-	  the_matrix = matrix_queue[matrix_queue.length-1];
+	  theMatrix = matrix_queue[matrix_queue.length-1];
 	  addNewStep(n-1);
       }
 
@@ -361,16 +359,16 @@
 	  if (which === "swap") {
 	      var i = Number($("#swap"+n+'-a').val());
 	      var j = Number($("#swap"+n+'-b').val());
-	      return MATRIX.swapRows(the_matrix, i, j);
+	      return MATRIX.swapRows(theMatrix.data, i, j);
 	  } else if (which === "scale") {
 	      var k = MATH.rat_fromstring($("#scale"+n+'-a').text());
 	      var i = Number($("#scale"+n+'-b').val());
-	      return MATRIX.scaleRow(the_matrix, i, k);
+	      return MATRIX.scaleRow(theMatrix.data, i, k);
 	  } else if (which === "addmult") {
 	      var k = MATH.rat_fromstring($("#addmult"+n+'-a').text());
 	      var i = Number($("#addmult"+n+'-b').val());
 	      var j = Number($("#addmult"+n+'-c').val());
-	      return MATRIX.addMultiple(the_matrix, k, i, j); 
+	      return MATRIX.addMultiple(theMatrix.data, k, i, j); 
 	  }
       }
 
@@ -398,14 +396,15 @@
       // if augm is not given or falsey, then no vertical line will be drawn.
       // Each input box of the matrix is given an id like "entry32".
       function inputMatrix(nrows, ncols, augm) {
-	  var html = '<div class="leftbracket"></div>';
+	  var heightStyle = 'style="height:'+(50*nrows)+'px;"';
+	  var html = '<div class="leftbracket" '+heightStyle+'></div>';
 	  html += '<table style="display:inline-block; vertical-align:middle;">';
 	  html += subMatrix(nrows, 1, (augm || ncols));
 	  if (augm) {
-	      html += '<div class="vline"></div>';
+	      html += '<div class="vline" '+heightStyle+'></div>';
 	      html += subMatrix(nrows, augm+1, ncols);
 	  }
-	  html += '<div class="rightbracket"></div>'
+	  html += '<div class="rightbracket" '+heightStyle+'></div>'
 	  return html;
       }
 
@@ -431,7 +430,62 @@
 	  return true;
       }
 
+      function fillInputMatrixRandomly(nrows, ncols) {
+	  var m = MATRIX.randMatrix(nrows, ncols);
+	  for (var i = 1; i <= nrows; i++) {
+	      for (var j = 1; j <= ncols; j++) {
+		  if (!$("#entry"+i+j).prop('readonly')) {
+		      $("#entry"+i+j).val(MATH.rat_tostring(m[i-1][j-1]));
+		  }
+	      }
+	  }
+      }
 
+      function createInputMatrix(which) {
+	  switch(which) {
+	  case "sys2":
+	      theMatrix.nrows = 2;
+	      theMatrix.ncols = 3;
+	      theMatrix.augm = 2;
+	      break;
+	  case "sys3":
+	      theMatrix.nrows = 3;
+	      theMatrix.ncols = 4;
+	      theMatrix.augm = 3;
+	      break;
+	  case "inv2":
+	      theMatrix.nrows = 2;
+	      theMatrix.ncols = 4;
+	      theMatrix.augm = 2;
+	      break;
+	  case "inv3":
+	      theMatrix.nrows = 3;
+	      theMatrix.ncols = 6;
+	      theMatrix.augm = 3;	
+	      break;
+	  default:
+	      console.log("invalid option: " + which);
+	      break;
+	  }
+	  // Create the HTML for the input matrix.
+	  $("#inputMatrix").html(inputMatrix(theMatrix.nrows,theMatrix.ncols,theMatrix.augm));
+	  
+	  // Bind change event to every matrix element input field
+	  $(".matrixinput").change(function() {
+	      $("#beginbutton").prop('disabled', !isValidInputMatrix(theMatrix.nrows,theMatrix.ncols));
+	  });
+
+	  // If an inverse problem, prefill right hand side with identity matrix.
+	  if (which === "inv2" || which === "inv3") {
+	      for (var i = 1; i <= theMatrix.nrows; i++) {
+		  for (var j = theMatrix.augm+1; j <= theMatrix.ncols; j++) {
+		      $("#entry"+i+j).val((i === j-theMatrix.augm) ? 1 : 0);
+		      $("#entry"+i+j).prop('readonly', true);
+		  }
+	      }
+	  }
+      }
+      
     </script>
   </head>
   
@@ -439,15 +493,31 @@
     <div id="preamble" style="font-size: 32px; margin-left: 30px; margin-right: 80px;">
       Gaussian Elimination Helper
     </div>
-   
-    <p>
+    
+    <p></p>
+      
+    <div style="font-size: 24px">I want to
+      <select id="problemSelect">
+	<option value="sys2">solve a system of two equations with two unknowns</option>
+	<option value="sys3">solve a system of three equations with three unknowns</option>
+	<option value="inv2">find the inverse of a 2x2 matrix</option>
+	<option value="inv3">find the inverse of a 3x3 matrix</option>
+      </select>
+    </div>
+	
+    <p></p>
 
-    <div id="matrix" style="display:inline-block;"></div>
+    <div id="inputMatrix" style="margin-left: 20px; display:inline-block;"></div>
+
+    <p></p>
+      
+    <div id="startMatrix" style="font-size: 32px; margin-left: 55px; display:inline-block;"></div>
 
     <p>
 
     <div id="begin">
       <input id="beginbutton" type="button" class="gobutton" value="Begin" disabled=true>
+      <input id="randbutton" type="button" class="undobutton" value="Randomize">
     </div>
     
     <ol id="elimination">  
@@ -474,22 +544,31 @@
 	      return $this;
 	  });
 
-	  //the_matrix = MATRIX.randMatrix(3,4);
-	  //matrix_queue.push(the_matrix);
-	  //$("#matrix").html(MATRIX.typeset(the_matrix));
-	  //MathJax.Hub.Queue(["Typeset", MathJax.Hub, "matrix"]);
-	  //addNewStep(1);      
-
-	  $("#matrix").html(inputMatrix(3,4,3));
-	  $(".matrixinput").change(function() {
-	      $("#beginbutton").prop('disabled', !isValidInputMatrix(3,4));
+	  // Create a new input matrix whenever the problem type changes.
+	  $("#problemSelect").change(function() {
+	      var which = $(this).val();
+	      createInputMatrix(which);
 	  });
+
+	  // Default input matrix is for system of two equations.
+	  createInputMatrix("sys2");
+
+	  // Start the elimination process when the "Begin" button is clicked.
 	  $("#beginbutton").click(function() {
-	      the_matrix = readMatrix(3, 4);
-	      matrix_queue.push(the_matrix);
+	      theMatrix.data = readMatrix(theMatrix.nrows, theMatrix.ncols);
+	      matrix_queue.push(theMatrix);
+	      $("#startMatrix").html(MATRIX.typeset(theMatrix.data, theMatrix.augm));
+	      MathJax.Hub.Queue(["Typeset", MathJax.Hub, "startMatrix"]);
 	      addNewStep(1);
+	      $("#problemSelect").prop('disabled', true);
 	      $(".matrixinput").prop('readonly', true);
-	      $(this).remove();
+	      $("#begin").remove();
+	  });
+
+	  // Fill matrix with random values when "Randomize" button is clicked.
+	  $("#randbutton").click(function() {
+	      fillInputMatrixRandomly(theMatrix.nrows, theMatrix.ncols);
+	      $("#beginbutton").prop('disabled', !isValidInputMatrix(theMatrix.nrows,theMatrix.ncols));
 	  });
 
       });
