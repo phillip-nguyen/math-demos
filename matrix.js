@@ -62,11 +62,16 @@ var MATRIX = (function() {
     }
 
     // Returns LaTeX code to typeset an augmented matrix.
-    function typeset(m) {
-	var html = '\\('
-	    + '\\left[\\begin{array}{'
-	    + new Array(numCols(m)).join('r')
-	    + '|r}';
+    // The optional augm argument specifies the column number
+    // after which a vertical line will be drawn.
+    function typeset(m, augm) {
+	var html = '\\(\\left[\\begin{array}{';
+	if (augm && augm > 0 && augm < numCols(m)) {
+	    html += new Array(augm+1).join('r') + '|' + new Array(numCols(m)-augm+1).join('r')
+	} else {
+	    html += new Array(numCols(m)+1).join('r')
+	}
+	html += '}';
 	var rows = [];
 	for (var i=0, len=numRows(m); i < len; i++) {
 	    rows.push($.map(m[i], function(x,index) {
