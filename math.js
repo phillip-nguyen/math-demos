@@ -218,6 +218,16 @@ var MATH = (function() {
 	return false;
     }
 
+    function rat_tostring(r) {
+	var p = r[0], q = r[1];
+	if (q < 0) { 
+	    p *= -1;
+	    q *= -1;
+	}
+	if (q === 1) return p.toString(10);
+	return (p.toString(10)+'/'+q.toString(10));
+    }
+
     my.divisors = get_divisors;
     //my.prime_factors = prime_factors;
     //my.least_factor = least_factor;
@@ -238,6 +248,7 @@ var MATH = (function() {
     my.is_integer = is_integer;
     my.rat_typeset = rat_typeset;
     my.rat_fromstring = rat_fromstring;
+    my.rat_tostring = rat_tostring;
 
     return my;
 }());
