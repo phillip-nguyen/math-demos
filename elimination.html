@@ -177,6 +177,10 @@
       .step {
 	  font-size: 24px;
       }
+      .rowop {
+	  margin-top: 5px;
+	  display: inline-block;
+      }
     </style>
 
     <script src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
@@ -304,12 +308,12 @@
 		  + '<option value="addmult">Add a multiple of one row to another</option>'
 		  + '<option value="scale">Multiply a row by a nonzero number</option>'
 		  + '<option value="swap">Swap two rows</option>'
-		  + '</select><p>'
+		  + '</select><br>'
 		  + '<div id="rowop'+n+'" class="rowop"></div><p>'
 		  + '<div id="result'+n+'">'
 		  + '<input id="gobutton'+n+'" type="button" class="gobutton" value="Go!">'
 		  + (n>1 ? ('<input id="undobutton'+n+'" type="button" class="undobutton" value="Undo Last Step">') : '')
-		  + '</div>'
+		  + '</div></p>'
 		  + '</li>'
 	  );
 	  // The default selected row operation is add multiple.
