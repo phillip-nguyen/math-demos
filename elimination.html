@@ -15,10 +15,17 @@
 	  margin: 0px;
 	  font-size: 24px;
 	  color: #0000cc;
-	  text-align: center;
 	  display: inline-block;
-	  height: 26px;
-	  vertical-align: -3px;
+	  line-height: 28px;
+	  height: 28px;
+	  /* Cannot have vertical-align: baseline because firefox will
+	     align the contenteditable differently depending on whether or not
+	     it is empty. Maybe this is how it is supposed to work? 
+	     http://www.w3.org/TR/2008/REC-CSS2-20080411/visudet.html#line-height
+	     If so it's kind of dumb.  Using bottom or middle at least gives somewhat
+	     consistent positioning across browsers.
+	     */
+	  vertical-align: bottom; 
       }
       /* This prevents linebreaks in the input fields */
       .customInput br{
@@ -27,7 +34,7 @@
       .customInput:focus {
 	  border: 1px solid #5ebaed;
 	  box-shadow: inset 0px 1px 5px 0px lightgray, 0 0 10px #5ebaed;
-	  outline: none;	  
+	  outline: none;
       }
       .customInput[contenteditable=false] { 
 	  outline: none;
@@ -47,6 +54,7 @@
       select {
 	  font-size: 18px;
 	  border: 1px solid #9C9C9C; /* crazy hack needed to make webkit change font-size */
+	  text-align: middle;
       }
       div.radiocell {
 	  display: inline-table;
@@ -297,7 +305,7 @@
 		  + '<option value="scale">Multiply a row by a nonzero number</option>'
 		  + '<option value="swap">Swap two rows</option>'
 		  + '</select><p>'
-		  + '<div id="rowop'+n+'"></div><p>'
+		  + '<div id="rowop'+n+'" class="rowop"></div><p>'
 		  + '<div id="result'+n+'">'
 		  + '<input id="gobutton'+n+'" type="button" class="gobutton" value="Go!">'
 		  + (n>1 ? ('<input id="undobutton'+n+'" type="button" class="undobutton" value="Undo Last Step">') : '')
@@ -512,7 +520,7 @@
     <p></p>
       
     <div style="font-size: 24px">I want to
-      <select id="problemSelect" tabindex=1>
+      <select id="problemSelect" tabindex=1 autocomplete="off">
 	<option value="sys2">solve a system of two equations with two unknowns</option>
 	<option value="sys3">solve a system of three equations with three unknowns</option>
 	<option value="inv2">find the inverse of a 2x2 matrix</option>
@@ -527,18 +535,23 @@
     <p></p>
       
     <div id="begin" style="margin-left:75px;">
-      <input id="beginbutton" type="button" class="gobutton" value="Begin" disabled tabindex="0">
-      <input id="randbutton" type="button" class="undobutton" value="Randomize" tabindex="0">
+      <input id="beginbutton" type="button" class="gobutton" value="Begin" disabled tabindex="0" autocomplete="off">
+      <input id="randbutton" type="button" class="undobutton" value="Randomize" tabindex="0" autocomplete="off">
     </div>
     
     <ol id="elimination">
     </ol>
 
-    <p>&nbsp;
-
+    <p>&nbsp;</p>
       
     
+    
     <script type="text/javascript">
+      // Note to self:
+      // All initial inputs must have the attribute autocomplete="off"
+      // otherwise firefox by default will restore them with whatever settings they
+      // currently have when you refresh the page (which is stupid).
+      
       $(function() {
 	  // Some code to force contenteditable to trigger 'change' events.
 	  // http://stackoverflow.com/questions/1391278/contenteditable-change-events
