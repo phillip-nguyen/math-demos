@@ -197,6 +197,7 @@ var MATH = (function() {
     // If str is a decimal, then returns [r, 1] where r is a real number
     // If str is a decimal / decimal then divides and returns [r, 1]
     function rat_fromstring(str) {
+	str = str.replace(/\s+/g, ''); // remove spaces
 	var r = str.split('/');
 	var p, q;
 	if (r.length === 1) {
