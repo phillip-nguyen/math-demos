@@ -1,0 +1,778 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Exponential Modeling II</title>
+    <style type="text/css">
+      html, body { height: 95%; }
+      #graphdiv {
+	  width: 400px;
+	  height: 400px;
+	  position: relative;
+	  margin: 0 auto;
+      }
+      .graph { 
+	  width: 100%;
+	  height: 100%;
+	  border: 0px solid gray;
+	  margin: 0px;
+	  position: absolute;
+	  left: 0;
+	  top: 0;
+      }
+      #graph1 { z-index: 0; }
+      #graph2 { z-index: 1; }
+      .customInput {
+	  border: 1px solid #ccc;
+	  border-radius: 2px;
+	  box-shadow: inset 0px 1px 5px 0px lightgray;
+	  font: -moz-field;
+	  font: -webkit-small-control;
+	  padding: 2px 10px;
+	  margin: 0px;
+	  font-size: 24px;
+	  color: #0000cc;
+	  display: inline-block;
+	  line-height: 28px;
+	  height: 28px;
+	  /* Cannot have vertical-align: baseline because firefox will
+	     align the contenteditable differently depending on whether or not
+	     it is empty. Maybe this is how it is supposed to work? 
+	     http://www.w3.org/TR/2008/REC-CSS2-20080411/visudet.html#line-height
+	     If so it's kind of dumb.  Using bottom or middle at least gives somewhat
+	     consistent positioning across browsers.
+	     */
+	  vertical-align: bottom;
+      }
+      /* This prevents linebreaks in the input fields */
+      .customInput br{
+	  display: none;
+      }
+      .customInput:focus {
+	  border: 1px solid #5ebaed;
+	  box-shadow: inset 0px 1px 5px 0px lightgray, 0 0 10px #5ebaed;
+	  outline: none;
+      }
+      .customInput[contenteditable=false] { 
+	  outline: none;
+	  border: 1px dashed #ccc;
+	  box-shadow: none;
+      }
+      .exponent {
+	  font-size: 14px;
+	  line-height: 16px;
+	  height: 16px;
+	  padding: 2px 10px;
+	  vertical-align: top;
+      }
+      input[type="radio"] {
+	  vertical-align: middle;
+	  margin-top: 0px;
+	  margin-bottom: 10px;
+      }
+      select {
+	  font-size: 18px;
+	  border: 1px solid #9C9C9C; /* crazy hack needed to make webkit change font-size */
+	  text-align: middle;
+      }
+      .step {
+	  font-size: 24px;
+      }
+      .formula {
+	  text-align: left;
+	  margin-left: 50px;
+	  display: inline-block;
+	  font-size: 32px;
+      }
+      .checkmark {
+	  display: inline-block;
+	  border-radius: 50%;
+	  width: 32px;
+	  height: 32px;
+	  background-color: #00cc00;
+	  color: #ffff00;
+	  text-align: center;
+	  font-size: 26px;
+      }
+      .cross {
+	  display: inline-block;
+	  border-radius: 50%;
+	  width: 32px;
+	  height: 32px;
+	  background-color: #cc0000;
+	  color: #ff9999;
+	  text-align: center;
+	  font-size: 26px;
+      }
+      #walkthrough li {
+	  margin: 25px;
+      }
+      td.numer, td.denom {
+	  text-align: center;
+      }
+      td.denom {
+	  border-top: 2px solid black;
+	  padding-top: 3px;
+      }
+    </style>
+  
+
+    <script src="http://ajax.googleapis.com/ajax/libs/jquery/2.0.0/jquery.min.js"></script>
+    <script src="calc.js"></script>
+    <script src="math.js"></script>
+    <script src="poly.js"></script>
+    <script type="text/javascript">
+      "use strict";
+      // Copyright 2014 Phillip Nguyen.
+      // All rights reserved.
+
+      function init_canvas(name) {
+	  var canvas = $(name)[0];
+	  canvas.width = ""+$(name).width();
+	  canvas.height = ""+$(name).height();
+	  // Fix the coordinate system so that origin is in center of canvas
+	  // with y-axis pointing up and x-axis pointing right.
+	  var ctx = canvas.getContext("2d");
+	  
+	  var min_dimension = Math.min(canvas.width, canvas.height);
+	  canvas.scale = min_dimension / 25;
+	  
+	  //ctx.setTransform(scale, 0, 0, -scale, min_dimension / 2, min_dimension / 2);
+	  ctx.setTransform(canvas.scale, 0, 0, -canvas.scale, canvas.width/2, canvas.height*0.95);
+	  ctx.lineWidth=1/canvas.scale;
+      }
+
+      function draw_grid(x1, y1, x2, y2) {
+	  var canvas = $("#graph1")[0];
+	  var ctx = canvas.getContext("2d");
+	  var deg_to_rad = Math.PI/180.0;
+
+	  ctx.beginPath();
+	  ctx.strokeStyle="#cccccc";
+	  // Grid lines
+	  for (var i = y1; i <= y2; i++) {
+	      ctx.moveTo(x1, i);
+	      ctx.lineTo(x2, i);
+	  }
+	  for (var i = x1; i <= x2; i++) {
+	      ctx.moveTo(i, y1);
+	      ctx.lineTo(i, y2);
+	  }
+	  ctx.stroke();
+
+	  // X and Y axes.
+	  ctx.beginPath();
+	  ctx.strokeStyle="black";
+	  ctx.moveTo(x1-.5, 0);
+	  ctx.lineTo(x2+.5, 0);
+	  ctx.moveTo(0, y1-.5);
+	  ctx.lineTo(0, y2+.5);
+	  ctx.stroke();
+
+	  ctx.save();
+	  // X and Y axis labels
+	  ctx.setTransform(1, 0, 0, 1, canvas.width/2, canvas.height*0.95);
+	  ctx.font = "bold italic 18px Times New Roman";
+	  ctx.textAlign = "center";
+	  ctx.textBaseline = "middle";
+	  ctx.fillText("x", (x2+1.1)*canvas.scale, -0.1*canvas.scale);
+	  ctx.fillText("y", 0, -(y2+1.3)*canvas.scale);
+	  // tick mark labels
+	  ctx.font = "10px sans-serif";
+	  ctx.textBaseline = "middle";
+	  for (var i = x1; i <= x2; i++) {
+	      if (i === 0) continue;
+	      ctx.fillText(i.toString(), i*canvas.scale, 0.5*canvas.scale);
+	  }
+	  ctx.textAlign = "right";
+	  for (var i = y1; i <= y2; i++) {
+	      if (i === 0) continue;
+	      ctx.fillText(i.toString(), -0.2*canvas.scale, -i*canvas.scale);
+	  }
+	  ctx.restore();
+
+      }
+
+      function clear_graph() {
+	  var canvas = $("#graph2")[0];
+	  var ctx = canvas.getContext("2d");
+	  ctx.save();
+	  ctx.setTransform(1, 0, 0, 1, 0, 0);
+	  ctx.clearRect(0, 0, canvas.width, canvas.height);
+	  ctx.restore();
+      }
+
+      function randInt(min, max) {
+	  return Math.floor(Math.random() * (max - min + 1)) + min;
+      }
+
+      function randSign() {
+	  return (2*randInt(0,1) - 1);
+      }
+
+      var the_exponential;
+
+      function random_exponential() {
+	  var x1 = randSign()*randInt(1, 8);
+	  var y1 = randInt(1,10);
+	  var x2, y2;
+	  do {
+	      x2 = randSign()*randInt(1, 8);
+	  } while (Math.abs(x2 - x1) <= 1);
+	  do {
+	      y2 = randInt(1,10);
+	  } while (Math.abs(y2 - y1) <= 1);
+
+	  var b = Math.pow(y2/y1, 1/(x2-x1));
+	  var a = y1/Math.pow(b, x1);
+	  
+	  return {
+	      coeff: a,
+	      base: b,
+	      eval: function (x) { return a*Math.pow(b, x); }
+	  }
+      }
+
+      function graph_function() {
+	  var canvas = $("#graph2")[0];
+	  var ctx = canvas.getContext("2d");
+	  var incr = canvas.width / 2000;
+	  var x, y;
+	  
+	  ctx.strokeStyle="red";
+	  ctx.lineWidth=2/canvas.scale;
+
+	  var f = the_exponential.eval;
+
+	  // Determine bounds of graph.
+	  var bounds = [-10,10];
+	  if (bounds.length < 2) return;
+	  var x1 = bounds[0];
+	  var x2 = bounds[1];
+	  if (x1 > 11) return;
+	  if (x2 < -11) return;
+	  if (x1 < -11) x1 = -11;
+	  if (x2 > 11) x2 = 11;
+
+	  // Stroke the function.
+	  ctx.beginPath();
+	  for (x = x1; x <= x2; x += incr) {
+	      y = f(x);
+	      ctx.lineTo(x, y);
+	  }
+	  y = f(x2);
+	  ctx.lineTo(x2, y);
+	  ctx.stroke();
+
+	  // Mark points at integer coordinates.
+	  ctx.fillStyle="red";
+	  for (x = -10; x <= 10; x += 1) {
+	      y = f(x);
+	      if (Math.abs(y - Math.round(y)) < 1e-10 && 0 <= y && y <= 22) {
+		  ctx.beginPath();
+		  ctx.arc(x, y, 0.2, 0, 2*Math.PI);
+		  ctx.fill();
+	      }
+	  }
+      }
+
+      function signCharacter(x) {
+	  if (x < 0) {
+	      return '&#8722;';
+	  } else {
+	      return '+';
+	  }
+      }
+
+      function checkStep(step) {
+	  if (isPartiallyBlankStep(step)) {
+	      unmarkWrong(step);
+	  } else if (step.checkAnswers()) {
+	      markCorrect(step);
+	      theProblem.currentStepNumber += 1;
+	      displayCurrentStep();
+	  } else {
+	      markWrong(step);
+	  }
+      }
+
+      function displayCurrentStep() {
+	  var step = theProblem["step"+theProblem.currentStepNumber];
+	  var stepClass = ".ans"+step.number;
+
+	  step.display();
+
+	  // Set up different event handlers to check answers.
+	  // For customInput class, we check on blur or keydown (enter).
+	  // For input elements we check on change event.
+	  $(".customInput"+stepClass).blur(function() { 
+	      checkStep(step); 
+	  });
+	  $(".customInput"+stepClass).keydown(function(e) {
+	      if (e.which === 13) {
+		  e.preventDefault();
+		  checkStep(step); 
+	      }
+	  });
+	  $("input"+stepClass).change(function() { 
+	      checkStep(step); 
+	  });
+	  $("select"+stepClass).change(function() { 
+	      checkStep(step); 
+	  });
+
+	  // Focus on the first text entry element available.
+	  if (step.answerIDs && step.answerIDs.length > 0) {
+	      $("#"+step.answerIDs[0]).focus();
+	  }
+      }
+
+      function isPartiallyBlankStep(step) {
+	  for (var i = 0, len = step.answerIDs.length; i < len; i++) {
+	      var selector = '#'+step.answerIDs[i];
+	      var answer;
+	      if ($(selector).is("input, select")) {
+		  answer = $(selector).val();
+	      } else {
+		  answer = $(selector).text();
+	      }
+	      if (answer === '') return true;
+	  }
+	  return false;
+      }
+
+      function unmarkWrong(step) {
+	  $(".ans"+step.number).css("background-color", "white");
+      }
+
+      function markCorrect(step) {
+	  $("#step"+step.number+"-grade").html('<div class="checkmark">&#x2713;</div>');
+	  $(".customInput.ans"+step.number).prop('contenteditable', false);
+	  $("input.ans"+step.number).prop('readonly', true);
+	  $("select.ans"+step.number).prop('disabled', true);
+	  $(".ans"+step.number).css("background-color", "white");
+	  $(".ans"+step.number).unbind("blur keydown change");
+	  // Disable unchecked radio buttons
+	  $('.ans'+step.number+':radio:not(:checked)').attr('disabled', true);
+      }
+
+      function markWrong(step) {
+	  $("#step"+step.number+"-grade").html('<div class="cross">&#x2718;</div>');
+	  $(".ans"+step.number).css("background-color", "pink");
+      }
+
+      // Return an HTML string for custom input textfield replacement
+      // made up of a classed contenteditable span element.
+      // id is the id string of the element.
+      // cls is the space-separated class string of the element.
+      // The customInput class is automatically added.
+      function customInput(id, cls) {
+	  if (!cls) { cls = "customInput"; } 
+	  else { cls = "customInput " + cls; }
+	  return ('<span style="vertical-align:0.1em; display:inline-block">'
+		  + '<span id="'+id+'" class="'+cls+'" contenteditable></span>' 
+		  + '</span>');
+      }
+
+      var theProblem = {};
+      theProblem.step1 = {
+	  number: 1,
+	  answerIDs: ["ans1-a", "ans1-b"],
+	  
+	  display: function() {
+	      $("#walkthrough").append(
+		  '<li id="step1" class="step">'
+		      + 'Because the function is '
+		      + '<select id="ans1-a" class="ans1">'
+		      + '<option value=""></option>'
+		      + '<option value="1">increasing</option>'
+		      + '<option value="2">decreasing</option>'
+		      + '</select>,<br>'
+		      + 'the base "<i>a</i>" is '
+		      + '<select id="ans1-b" class="ans1">'
+		      + '<option value=""></option>'
+		      + '<option value="1">less than 1</option>'
+		      + '<option value="2">equal to 1</option>'
+		      + '<option value="3">greater than 1</option>'
+		      + '</select>'
+		      + ' <span id="step1-grade"></span>'
+		      + '</li>'
+	      );
+	  },
+
+	  checkAnswers: function() {
+	      var ans1a = $("#ans1-a").val();
+	      var ans1b = $("#ans1-b").val();
+	      
+	      return ((the_exponential.base < 1 && ans1a === "2" && ans1b === "1") ||
+		      (the_exponential.base > 1 && ans1a === "1" && ans1b === "3"));
+	  }
+      };
+
+      theProblem.step2 = {
+	  number: 2,
+	  answerIDs: ["ans2-a", "ans2-b"],
+
+	  display: function() {
+	      $("#walkthrough").append(
+		  '<li id="step2" class="step">'
+		      + 'A nice point on the graph is '
+		      + '<big>(</big>'
+		      + customInput("ans2-a", "ans2")
+		      + ", "
+		      + customInput("ans2-b", "ans2")
+		      + '<big>)</big>'
+		      + ' <span id="step2-grade"></span>'
+		      + '</li>'
+	      );
+	  },
+	  
+	  checkAnswers: function() {
+	      var ans2a = Number($("#ans2-a").text());
+	      var ans2b = Number($("#ans2-b").text());
+	      var y = the_exponential.eval(ans2a);
+	      var rounded = Math.round(y);
+	      var error = Math.abs(rounded - y);
+	      return (ans2b === rounded && error < 1e-10);
+	  }
+      };
+
+      theProblem.step3 = {
+	  number: 3,
+	  answerIDs: ["ans3-a", "ans3-b"],
+
+	  display: function() {
+	      $("li#step2").append(
+		  '<br>Plug this point into your partial formula to get an equation:<br>'
+		      + '<div class="formula">'
+		      + customInput("ans3-a", "ans3")
+		      + ' = <i>Ca</i>'
+		      + '<span style="vertical-align: 0.2em;">'
+		      + customInput("ans3-b", "ans3 exponent") 
+		      + '</span>'
+		      + ' <span id="step3-grade"></span>'
+		      + '</div>'
+	      );
+	  },
+	  
+	  checkAnswers: function() {
+	      var ans3a = Number($("#ans3-a").text());
+	      var ans3b = Number($("#ans3-b").text());
+	      
+	      var x = Number($("#ans2-a").text());
+	      var y = Number($("#ans2-b").text());
+	      
+	      return (ans3a === y && ans3b === x);
+	  }	  
+      };
+
+      theProblem.step4 = {
+	  number: 4,
+	  answerIDs: ["ans4-a", "ans4-b"],
+
+	  display: function() {
+	      $("#walkthrough").append(
+		  '<li id="step4" class="step">'
+		      + 'Another nice point on the graph is '
+		      + '<big>(</big>'
+		      + customInput("ans4-a", "ans4")
+		      + ", "
+		      + customInput("ans4-b", "ans4")
+		      + '<big>)</big>'
+		      + ' <span id="step4-grade"></span>'
+		      + '</li>'
+	      );
+	  },
+	  
+	  checkAnswers: function() {
+	      var ans2a = Number($("#ans2-a").text());
+	      var ans2b = Number($("#ans2-b").text());
+
+	      var ans4a = Number($("#ans4-a").text());
+	      var ans4b = Number($("#ans4-b").text());
+
+	      if (ans2a === ans4a || ans2b === ans4b) return false;
+
+	      var y = the_exponential.eval(ans4a);
+	      var rounded = Math.round(y);
+	      var error = Math.abs(rounded - y);
+	      return (ans4b === rounded && error < 1e-10);
+	  }
+      };
+
+      theProblem.step5 = {
+	  number: 5,
+	  answerIDs: ["ans5-a", "ans5-b"],
+
+	  display: function() {
+	      $("li#step4").append(
+		  '<br>Plug this point into your partial formula to get a second equation:<br>'
+		      + '<div class="formula">'
+		      + customInput("ans5-a", "ans5")
+		      + ' = <i>Ca</i>'
+		      + '<span style="vertical-align: 0.2em;">'
+		      + customInput("ans5-b", "ans5 exponent") 
+		      + '<span>'
+		      + ' <span id="step5-grade"></span>'
+		      + '</div>'
+	      );
+	  },
+	  
+	  checkAnswers: function() {
+	      var ans5a = Number($("#ans5-a").text());
+	      var ans5b = Number($("#ans5-b").text());
+	      
+	      var x = Number($("#ans4-a").text());
+	      var y = Number($("#ans4-b").text());
+	      
+	      return (ans5a === y && ans5b === x);
+	  }	  
+      };
+
+      theProblem.step6 = {
+	  number: 6,
+	  answerIDs: ["ans6-a", "ans6-b", "ans6-c", "ans6-d"],
+	  
+	  display: function() {
+	      $("#walkthrough").append(
+		  '<li id="step6" class="step">'
+		      + 'Divide your two equations:<br>'
+		      + '<div class="formula"><table style="display:inline-table;">'
+		      + '<tr><td class="numer">' + customInput("ans6-a", "ans6") + '</td>'
+		      + '<td rowspan="2"><span style="padding: 0px 8px;">=</span></td>'
+		      + '<td class="numer"><i>Ca</i>' 
+		      + '<span style="vertical-align: 0.2em">' + customInput("ans6-b", "ans6 exponent") + '</span>'
+		      + '</td></tr>'
+		      + '<tr><td class="denom">' + customInput("ans6-c", "ans6") + '</td>'
+		      + '<td class="denom"><i>Ca</i>' 
+		      + '<span style="vertical-align: 0.2em">' + customInput("ans6-d", "ans6 exponent") + '</span>'
+		      + '</td></tr>'
+		      + '</table>'
+		      + ' <span id="step6-grade"></span>'
+		      + '</div>'
+		      + '</li>'
+	      );
+	  },
+
+	  checkAnswers: function() {
+	      var x1 = Number($("#ans2-a").text());
+	      var y1 = Number($("#ans2-b").text());
+	      var x2 = Number($("#ans4-a").text());
+	      var y2 = Number($("#ans4-b").text());
+
+	      var ans6a = Number($("#ans6-a").text());
+	      var ans6b = Number($("#ans6-b").text());
+	      var ans6c = Number($("#ans6-c").text());
+	      var ans6d = Number($("#ans6-d").text());
+
+	      return ((y1 === ans6a && x1 === ans6b && y2 === ans6c && x2 === ans6d) ||
+		      (y2 === ans6a && x2 === ans6b && y1 === ans6c && x1 === ans6d));
+	  }
+      };
+
+      theProblem.step7 = {
+	  number: 7,
+	  answerIDs: ["ans7-a", "ans7-b"],
+	  
+	  display: function() {
+	      $("li#step6").append(
+		  '<p>Then simplify the above expression (using exact numbers):<br>'
+		      + '<div class="formula">'
+		      + customInput("ans7-a", "ans7")
+		      + ' = <i>a</i>'
+		      + '<span style="vertical-align: 0.2em;">'
+		      + customInput("ans7-b", "ans7 exponent") 
+		      + '<span>'
+		      + ' <span id="step7-grade"></span>'
+		      + '</div>'
+	      );
+	  },
+
+	  checkAnswers: function() {
+	      var y1 = Number($("#ans6-a").text());
+	      var x1 = Number($("#ans6-b").text());
+	      var y2 = Number($("#ans6-c").text());
+	      var x2 = Number($("#ans6-d").text());
+
+	      var ans7b = Number($("#ans7-b").text());
+
+	      if (ans7b !== x1-x2) return false;
+
+	      var r = MATH.rat_fromstring($("#ans7-a").text());
+	      var error = Math.abs(MATH.rat_real(r) - y1/y2);
+	      return (error < 0.000005);
+	  }
+      };
+
+      theProblem.step8 = {
+	  number: 8,
+	  answerIDs: ["ans8-a"],
+
+	  display: function() {
+	      $("#walkthrough").append(
+		  '<li id="step8" class="step">'
+		      + 'Solve the above equation for the <u>approximate</u> value of <i>a</i>, correct to the nearest five decimal places:<br>'
+		      + '<div class="formula-div">'
+		      + '<span class="formula">'
+		      + '<i>a</i> = '
+		      + customInput("ans8-a", "ans8")
+		      + '</span>'
+		      + ' <span id="step8-grade"></span>'
+		      + '</div>'
+		      + '</li>'
+	      );
+	  },
+
+	  checkAnswers: function() {
+	      var ans8a = Number($("#ans8-a").text());
+	      
+	      var base = the_exponential.base;
+	      return (Math.abs(base - ans8a) < 0.000005);
+	  }
+      };
+
+      theProblem.step9 = {
+	  number: 9,
+	  answerIDs: ["ans9-a", "ans9-b", "ans9-c"],
+
+	  display: function() {
+	      $("#walkthrough").append(
+		  '<li id="step9" class="step">'
+		      + 'Now substitute your answer for <i>a</i> back into one of your earlier equations:<br>'
+		      + '<div class="formula">'
+		      + customInput("ans9-a", "ans9")
+		      + ' = <i>C</i><big>(</big>'
+		      + customInput("ans9-b", "ans9") 
+		      + '<big>)</big>'
+		      + '<span style="vertical-align: 0.2em;">'
+		      + customInput("ans9-c", "ans9 exponent") 
+		      + '<span>'
+		      + ' <span id="step5-grade"></span>'
+		      + '</div></p>'
+		      + '</li>'
+	      );
+	  },
+	  
+	  checkAnswers: function() {
+	      // Check for same base.
+	      var ans8a = $.trim($("#ans8-a").text());
+	      var ans9b = $.trim($("#ans9-b").text());
+	      if (ans9b !== ans8a) return false;
+
+	      // Check that we're using a valid (x,y) from earlier.
+	      var x1 = Number($("#ans2-a").text());
+	      var y1 = Number($("#ans2-b").text());
+	      var x2 = Number($("#ans4-a").text());
+	      var y2 = Number($("#ans4-b").text());
+
+	      var ans9a = Number($("#ans9-a").text());
+	      var ans9c = Number($("#ans9-c").text());
+	      return ((y1 === ans9a && x1 === ans9c) ||
+		      (y2 === ans9a && x2 === ans9c));
+
+	  }
+      };
+
+      theProblem.step10 = {
+	  number: 10,
+	  answerIDs: ["ans10-a"],
+
+	  display: function() {
+	      $("#walkthrough").append(
+		  '<li id="step10" class="step">'
+		      + 'Solve the above equation for the <u>approximate</u> value of <i>C</i>, correct to the nearest four decimal places:<br>'
+		      + '<div class="formula-div">'
+		      + '<span class="formula">'
+		      + '<i>C</i> = '
+		      + customInput("ans10-a", "ans10")
+		      + '</span>'
+		      + ' <span id="step10-grade"></span>'
+		      + '</div>'
+		      + '</li>'
+	      );
+	  },
+
+	  checkAnswers: function() {
+	      var ans10a = Number($("#ans10-a").text());
+	      
+	      var coeff = the_exponential.coeff;
+	      return (Math.abs(coeff - ans10a) < 0.00005);
+	  }
+      };
+
+      theProblem.step11 = {
+	  number: 11,
+	  answerIDs: ["ans11-a"],
+	  
+	  display: function() {
+	      $("#walkthrough").append(
+		  '<li id="step11" class="step">'
+		      + 'Using the values for <i>C</i> and <i>a</i> that you found above, '
+		      + 'write out the complete formula of the exponential function:<br>'
+		      + '(use the ^ symbol for exponents)<br>'
+		      + '<div class="formula-div">'
+		      + '<span class="formula"><i>f(x)</i> = '
+		      + customInput("ans11-a", "ans11")
+		      + '</span>'
+		      + ' <span id="step11-grade"></span>'
+		      + '</div>'
+		      + '</li>'
+	      );
+	  },
+
+	  checkAnswers: function() {
+	      var ans11a = $("#ans11-a").text();
+
+	      var coeff = Number($("#ans10-a").text());
+	      var base = Number($("#ans8-a").text());
+	      
+	      return (POLY.is_simplified_exponential(ans11a, coeff, base));
+	  }
+      };
+
+      theProblem.step12 = {
+	  number: 12,
+
+	  display: function() {
+	      $("#ans11-a").blur();
+	      $("#walkthrough").append(
+		  '<li id="step12" class="step" style="list-style: none;">'
+		      + "Congratulations, you're done!"
+		      + "<br>(Reload the page to try a new problem)"
+		      + '</li>'
+	      );
+	  }
+      };
+
+      theProblem.currentStepNumber = 1;
+
+    </script>
+  </head>
+  
+  <body>
+    <div id="graphdiv">
+      <canvas class="graph" id="graph1"></canvas>
+      <canvas class="graph" id="graph2"></canvas>
+    </div>
+
+    <div style="font-size: 30px; margin-left: 30px">
+    The graph of an exponential function of the form <i>f(x)=Ca<sup>x</sup></i> is shown above.
+    </div>
+    
+    <ol id="walkthrough">  
+    </ol>
+
+    <script type="text/javascript">
+      $(function() {
+	  init_canvas("#graph1");
+	  init_canvas("#graph2");
+	  draw_grid(-10,0,10,22);
+	  the_exponential = random_exponential();
+	  graph_function();
+	  displayCurrentStep();
+      });
+    </script>
+
+  </body>
+
+
+</html>
