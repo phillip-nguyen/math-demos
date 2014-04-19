@@ -50,6 +50,28 @@ var MATRIX = (function() {
 	return copy;
     }
 
+    // Multiply matrix m1 by matrix m2 and return the
+    // result as a new matrix.
+    function multiply(m1, m2) {
+	if (numCols(m1) !== numRows(m2)) return undefined;
+	var result = [];
+	var nrows = numRows(m1);
+	var ncols = numCols(m2);
+	var indim = numCols(m1);
+	for (var i = 0; i < nrows; i++) {
+	    var row = [];
+	    for (var j = 0; j < ncols; j++) {
+		var sum = [0, 1];
+		for (var k = 0; k < indim; k++) {
+		    sum = MATH.rat_add(sum, MATH.rat_mul(m1[i][k], m2[k][j]));
+		}
+		row.push(sum);
+	    }
+	    result.push(row);
+	}
+	return result;
+    }
+
     // Returns the number of rows in the matrix m.
     function numRows(m) {
 	return m.length;
@@ -108,5 +130,6 @@ var MATRIX = (function() {
 	numCols: numCols,
 	typeset: typeset,
 	randMatrix: randMatrix,
+	multiply: multiply,
     };
 }());
