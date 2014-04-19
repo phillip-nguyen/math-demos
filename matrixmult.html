@@ -368,7 +368,7 @@
 
 	  // Link each summand to corresponding row, column, and entries in factor matrices.
 	  for (var i = 1; i <= nrows; i++) {
-	      for (var j = 1; j <= nrows; j++) {
+	      for (var j = 1; j <= ncols; j++) {
 		  for (var k = 1; k <= indim; k++) {
 		      (function(i, j, k) {
 			  $('#'+name+'-input'+i+j+k).focus(function() {
@@ -435,12 +435,8 @@
 
       // Mark all input fields in the named matrix as both readonly and disabled.
       function disableInputMatrix(matrix) {
-	  for (var i = 1; i <= matrix.nrows; i++) {
-	      for (var j = 1; j <= matrix.ncols; j++) {
-		  $("#"+matrix.name+"-input"+i+j).prop('readonly', 'true')
-		  $("#"+matrix.name+"-input"+i+j).prop('disabled', 'true')
-	      }
-	  }
+	  $("input[id^="+matrix.name+"-input]").prop('disabled', true);
+	  $("input[id^="+matrix.name+"-input]").prop('readonly', true);
       }
 
       // Computes a matrix containing lists of terms to be summed for
@@ -549,8 +545,8 @@
     I want to multiply a 
     <select id="nrowsA" class="sizeSelect" autocomplete="off">
       <option value="1">1</option>
-      <option value="2">2</option>
-      <option value="3" selected>3</option>
+      <option value="2" selected>2</option>
+      <option value="3">3</option>
       <option value="4">4</option>
       <option value="5">5</option>
     </select>
@@ -558,16 +554,16 @@
     <select id="ncolsA" class="sizeSelect" autocomplete="off">
       <option value="1">1</option>
       <option value="2">2</option>
-      <option value="3">3</option>
-      <option value="4" selected>4</option>
+      <option value="3" selected>3</option>
+      <option value="4">4</option>
       <option value="5">5</option>
     </select>
     matrix by a
     <select id="nrowsB" class="sizeSelect" autocomplete="off">
       <option value="1">1</option>
       <option value="2">2</option>
-      <option value="3">3</option>
-      <option value="4" selected>4</option>
+      <option value="3" selected>3</option>
+      <option value="4">4</option>
       <option value="5">5</option>
     </select>
     &times;
@@ -583,11 +579,11 @@
 
     <p></p>
 
-    <div id="matA" style="font-size: 32px; margin-left: 55px; display:inline-block;"></div>
+    <div id="matA" style="font-size: 32px; margin-left: 55px; display:inline-block; white-space: nowrap;"></div>
 
     <span style="font-size: 64px; vertical-align: middle;">&middot;</span>
 
-    <div id="matB" style="font-size: 32px; margin-left: 0px; display:inline-block;"></div>
+    <div id="matB" style="font-size: 32px; margin-left: 0px; display:inline-block; white-space: nowrap;"></div>
 
     <p></p>
 
@@ -639,9 +635,10 @@
 	  });
 
 
-	  createRowHighlightedMatrix(matrixA.name, matrixA.nrows, matrixA.ncols);
+	  resizeInputMatrices();
+	  //createRowHighlightedMatrix(matrixA.name, matrixA.nrows, matrixA.ncols);
 
-	  createColumnHighlightedMatrix(matrixB.name, matrixB.nrows, matrixB.ncols);
+	  //createColumnHighlightedMatrix(matrixB.name, matrixB.nrows, matrixB.ncols);
 
 	  // Bind change event to every matrix element input field
 	  $("input[id^=matA-input]").change(function() {
@@ -664,7 +661,7 @@
 	      // Insert placeholder div for the intermediate sum matrix and next button.
 	      $('#begin').after(
 		  '<span style="font-size: 64px; vertical-align: middle;"> = </span>'
-		      + '<div id="matC" style="font-size: 32px; margin-left: 0px; display:inline-block;"></div>'
+		      + '<div id="matC" style="font-size: 32px; margin-left: 0px; display:inline-block; white-space: nowrap;"></div>'
 		      + '<p></p>'
 		      + '<div id="next" style="margin-left:75px;">'
 		      + '<input id="nextButton" type="button" class="button greenButton" value="Next Step" disabled tabindex="0" autocomplete="off">'
@@ -680,6 +677,7 @@
 	      // Remove the begin and randomize buttons and disable the input matrices
 	      // so that they can't be edited or tabbed to.
 	      $("#begin").remove();
+
 	      disableInputMatrix(matrixA);
 	      disableInputMatrix(matrixB);
 	      $("#nrowsA").prop('disabled', true);
@@ -703,12 +701,11 @@
 
 	      // Go to final step when next button is clicked.
 	      $("#nextButton").click(function() {
-		  $("input[id^=matC-input]").prop('disabled', true);
-		  $("input[id^=matC-input]").prop('readonly', true);
+		  disableInputMatrix(matrixC);
 
 		  $("#next").after(
 		      '<span style="font-size: 64px; vertical-align: middle;"> = </span>'
-			  + '<div id="matD" style="font-size: 32px; margin-left: 0px; display:inline-block;"></div>'
+			  + '<div id="matD" style="font-size: 32px; margin-left: 0px; display:inline-block; white-space: nowrap"></div>'
 		  );
 
 		  // Insert HTML for the final product matrix.
@@ -739,12 +736,14 @@
 			  })(i, j);
 		      }
 		  }
-
 		  
 		  // Bind function to change event of the input fields in product matrix.
 		  $("input[id^=matD-input]").change(function() {
 		      if (validateProductMatrix(matrixD, product)) {
-			  disableInputMatrix(matrixD);
+			  // Mark input fields as readonly, but don't disable them
+			  // so that it will still be possible to tab through them.
+			  $("input[id^=matD-input]").prop("readonly", true);
+			  // Display check mark to indicate we're done.
 			  $("#matD").after(
 			      '<div class="checkmark" style="margin-left:20px;">&#x2713;</div>'
 			  );
