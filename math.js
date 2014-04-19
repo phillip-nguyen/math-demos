@@ -139,6 +139,13 @@ var MATH = (function() {
 	}
 	return [p, q];
     }
+
+    // Returns true if r1 and r2 both represent the same rational number.
+    function rat_equals(r1, r2) {
+	r1 = rat_simplify(r1);
+	r2 = rat_simplify(r2);
+	return (r1[0] === r2[0] && r1[1] === r2[1]);
+    }
     
     // Performs operations on rational numbers,
     // simplifying the result.
@@ -237,7 +244,10 @@ var MATH = (function() {
     my.gcd = gcd;
     my.lcm = lcm;
 
+    my.is_integer = is_integer;
+
     my.rat_simplify = rat_simplify;
+    my.rat_equals = rat_equals;
     my.rat_mul = rat_mul;
     my.rat_div = rat_div;
     my.rat_add = rat_add;
@@ -246,7 +256,6 @@ var MATH = (function() {
     my.rat_scale = rat_scale;
     my.rat_real = rat_real;
 
-    my.is_integer = is_integer;
     my.rat_typeset = rat_typeset;
     my.rat_fromstring = rat_fromstring;
     my.rat_tostring = rat_tostring;
