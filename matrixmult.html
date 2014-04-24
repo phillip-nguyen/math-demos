@@ -537,6 +537,15 @@
 
 	  createRowHighlightedMatrix(matrixA.name, matrixA.nrows, matrixA.ncols);
 	  createColumnHighlightedMatrix(matrixB.name, matrixB.nrows, matrixB.ncols);
+
+	  // Bind change event to every matrix element input field
+	  // This needs to happen every time the matrices are resized.
+	  $("input[id^=matA-input]").change(function() {
+	      $("#beginButton").prop('disabled', !(isValidInputMatrix(matrixA) && isValidInputMatrix(matrixB)));
+	  });
+	  $("input[id^=matB-input]").change(function() {
+	      $("#beginButton").prop('disabled', !(isValidInputMatrix(matrixA) && isValidInputMatrix(matrixB)));
+	  });
       }
  
     </script>
@@ -646,18 +655,9 @@
 	  });
 
 
+	  // Actually create the initial two input matrices.
 	  resizeInputMatrices();
-	  //createRowHighlightedMatrix(matrixA.name, matrixA.nrows, matrixA.ncols);
 
-	  //createColumnHighlightedMatrix(matrixB.name, matrixB.nrows, matrixB.ncols);
-
-	  // Bind change event to every matrix element input field
-	  $("input[id^=matA-input]").change(function() {
-	      $("#beginButton").prop('disabled', !(isValidInputMatrix(matrixA) && isValidInputMatrix(matrixB)));
-	  });
-	  $("input[id^=matB-input]").change(function() {
-	      $("#beginButton").prop('disabled', !(isValidInputMatrix(matrixA) && isValidInputMatrix(matrixB)));
-	  });
 
 	  // Fill matrices with random values when "Randomize" button is clicked.
 	  $("#randButton").click(function() {
