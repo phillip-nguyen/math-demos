@@ -177,6 +177,18 @@ var MATH = (function() {
 	return rat_simplify([-r[0], r[1]]);
     }
 
+    function rat_pow(r1, r2) {
+	// If r1 is negative and r2 has odd denominator, then make
+	// sure that the rational exponent is handled correctly.
+	if (r1[0] < 0 && is_integer(r2[0]) && is_integer(r2[1]) && r2[1] % 2 == 1) {
+	    var root = Math.pow(Math.abs(rat_real(r1)), 1/r2[1]);
+	    var power = Math.pow(-root, r2[0]);
+	    return rat_simplify([power, 1]);
+	}
+	// Otherwise just use regular pow.
+	return rat_simplify([Math.pow(rat_real(r1), rat_real(r2)), 1]);
+    }
+
     // Multiplies the rational number r by a scalar value k.
     // When k is an integer the result will still be rational.
     // If k is non-integral then an object of the form [r, 1]
@@ -253,6 +265,7 @@ var MATH = (function() {
     my.rat_add = rat_add;
     my.rat_sub = rat_sub;
     my.rat_neg = rat_neg;
+    my.rat_pow = rat_pow;
     my.rat_scale = rat_scale;
     my.rat_real = rat_real;
 
