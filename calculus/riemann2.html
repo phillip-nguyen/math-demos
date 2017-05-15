@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <style type="text/css">
+      html, body { height: 95%; }
+      #graphdiv {
+	  width: 400px;
+	  height: 400px;
+	  position: relative;
+	  margin: 0 auto;
+      }
+      .graph { 
+	  width: 100%;
+	  height: 100%;
+	  border: 0px solid green;
+	  margin: 0px;
+	  position: absolute;
+	  left: 0;
+	  top: 0;
+      }
+      #graph1 { z-index: 0; }
+      #graph2 { z-index: 1; }
+      .formula {
+	  font: 36px serif;
+      }
+      .formula-div {
+	  text-align: left;
+	  margin-left: 50px;
+      }
+      input::-webkit-outer-spin-button,
+      input::-webkit-inner-spin-button {
+	  -webkit-appearance: none;
+	  margin: 0;
+      }
+      input{ 
+	  color: #0000cc; 
+	  border: 1px solid #ccc;
+	  -webkit-appearance: none;
+      }
+      input:focus{ 
+	  color: #0000cc; 
+	  border: 1px solid #5ebaed;
+	  box-shadow: 0 0 10px #5ebaed;
+	  outline: none;
+	  -webkit-appearance: none;
+      }
+      input[readonly] { 
+	  outline: none;
+	  border: 1px dashed #ccc;
+	  -webkit-appearance: none;
+      }
+      input[readonly]:focus { 
+	  outline: none;
+	  border: 1px dashed #ccc;
+	  box-shadow: none;
+	  -webkit-appearance: none;
+      }
+      .input { 
+	  font-size: 28px;
+	  width: 100px;
+	  text-align: center;
+      }
+      .medinput { 
+	  font-size: 28px;
+	  width: 200px;
+	  text-align: center;
+      }
+      .biginput { 
+	  font-size: 28px;
+	  width: 300px;
+	  text-align: center;
+      }
+      .red-bar {
+	  height: 40px;
+	  font-size: 16px;
+	  line-height: 40px;
+	  border-radius: 5px;
+      }
+      #numRects-slider {
+	  height: 50px;
+      }
+      #numRects-slider .handle {
+	  height: 50px;
+	  line-height: 50px;
+	  font-size: 24px;
+	  font-weight: bold;
+	  /*font-family: Helvetica, sans-serif;*/
+      }
+      #numRects-slider .value {
+	  padding: 0 0 0 5px;
+      }
+    </style>
+  
+
+    <script src="http://ajax.googleapis.com/ajax/libs/jquery/2.0.0/jquery.min.js"></script>
+    <link href="dragdealer.css" type="text/css" rel="stylesheet">
+    <script src="dragdealer.js"></script>
+    <script src="calc.js"></script>
+    <script type="text/javascript">
+      "use strict";
+      // Copyright 2013 Phillip Nguyen.
+      // All rights reserved.
+
+      function init_canvas(name, xmin, xmax, xstep, ymin, ymax, ystep) {
+	  var canvas = $(name)[0];
+	  canvas.width = ""+$(name).width();
+	  canvas.height = ""+$(name).height();
+	  // Fix the coordinate system so that origin is in center of canvas
+	  // with y-axis pointing up and x-axis pointing right.
+	  var ctx = canvas.getContext("2d");
+	  
+	  canvas.margin = 25;
+	  canvas.xScale = (canvas.width - 2*canvas.margin) / (xmax - xmin);
+	  canvas.yScale = -(canvas.height - 2*canvas.margin) / (ymax - ymin);
+
+	  canvas.xmin = xmin;
+	  canvas.xmax = xmax;
+	  canvas.ymin = ymin;
+	  canvas.ymax = ymax;
+
+	  canvas.xstep = xstep;
+	  canvas.ystep = ystep;
+
+	  ctx.setTransform(canvas.xScale, 0, 0, canvas.yScale, canvas.margin - canvas.xmin*canvas.xScale, canvas.margin - canvas.ymax*canvas.yScale);
+      }
+
+      function draw_grid() {
+	  var canvas = $("#graph1")[0];
+	  var ctx = canvas.getContext("2d");
+	  var deg_to_rad = Math.PI/180.0;
+
+	  ctx.beginPath();
+	  ctx.strokeStyle="rgba(100,100,100,0.25)";
+	  // Grid lines
+	  for (var i = canvas.xmin; i <= canvas.xmax; i+=canvas.xstep) {
+	      ctx.moveTo(i, canvas.ymin);
+	      ctx.lineTo(i, canvas.ymax);
+	  }
+	  for (var i = canvas.ymin; i <= canvas.ymax; i+=canvas.ystep) {
+	      ctx.moveTo(canvas.xmin, i);
+	      ctx.lineTo(canvas.xmax, i);
+	  }
+	  // Before stroking the lines, we save the context,
+	  // and remove any scaling transformations so that the
+	  // linewidth will not be transformed, then restore the context.
+	  ctx.save();
+	  ctx.setTransform(1,0,0,1,0,0);
+	  ctx.lineWidth = 1;
+	  ctx.stroke();
+	  ctx.restore();
+
+	  // X and Y axes.
+	  var offset = 5;
+	  ctx.beginPath();
+	  ctx.strokeStyle="black";
+	  if (canvas.xmin <= 0 && 0 <= canvas.xmax) {
+	      ctx.moveTo(canvas.xmin - offset/canvas.xScale, 0);
+	      ctx.lineTo(canvas.xmax + offset/canvas.xScale, 0);
+	  }
+	  if (canvas.ymin <= 0 && 0 <= canvas.ymax) {
+	      // The signs are backwards here because yScale is negative.
+	      ctx.moveTo(0, canvas.ymin + offset/canvas.yScale);
+	      ctx.lineTo(0, canvas.ymax - offset/canvas.yScale);
+	  }
+	  ctx.save();
+	  ctx.setTransform(1,0,0,1,0,0);
+	  ctx.lineWidth = 1.5;
+	  ctx.stroke();
+	  ctx.restore();
+
+	  ctx.save();
+	  // X and Y axis labels
+	  ctx.setTransform(1, 0, 0, 1, canvas.margin - canvas.xmin*canvas.xScale, canvas.margin - canvas.ymax*canvas.yScale);
+	  ctx.font = "bold italic 18px Times New Roman";
+	  ctx.textAlign = "center";
+	  ctx.textBaseline = "middle";
+	  ctx.fillText("x", canvas.xmax*canvas.xScale + 3*offset, 0);
+	  ctx.fillText("y", 0, canvas.ymax*canvas.yScale - 4*offset);
+	  // tick mark labels
+	  ctx.font = "10px sans-serif";
+	  ctx.textBaseline = "middle";
+	  for (var x = canvas.xmin; x <= canvas.xmax; x+=canvas.xstep) {
+	      if (x === 0) continue;
+	      if (x < 0) {
+		  ctx.fillText("\u2212"+(-x), x*canvas.xScale, -0.5*canvas.yScale);
+	      } else {
+		  ctx.fillText(x, x*canvas.xScale, -0.5*canvas.yScale);
+	      }
+	  }
+	  ctx.textAlign = "right";
+	  for (var y = canvas.ymin; y <= canvas.ymax; y+=canvas.ystep) {
+	      if (y < 0) {
+		  ctx.fillText("\u2212"+(-y).toFixed(0), -0.08*canvas.xScale, y*canvas.yScale);
+	      } else {
+		  ctx.fillText(y.toFixed(0), -0.08*canvas.xScale, y*canvas.yScale);
+	      }
+	  }
+	  ctx.restore();
+      }
+
+      function clear_graph() {
+	  var canvas = $("#graph0")[0];
+	  var ctx = canvas.getContext("2d");
+	  ctx.save();
+	  ctx.setTransform(1, 0, 0, 1, 0, 0);
+	  ctx.clearRect(0, 0, canvas.width, canvas.height);
+	  ctx.restore();
+      }
+
+      function randInt(min, max) {
+	  return Math.floor(Math.random() * (max - min + 1)) + min;
+      }
+
+      var the_function = function(x) { return x*x*x - 6*x; }
+
+      function derivative(f) {
+	  return function(x) { return 100000*(f(x + 0.00001) - f(x)); }
+      }
+
+      // Uses the Newton-Raphson method to solve f(x) = 0
+      // starting with initial guess of x.  The solver
+      // looks for a solution until either the difference
+      // between successive iterations is less than 1e-12 or
+      // until we exceed the maximum allowed iterations.
+      // Not really very robust.  If df(x) = 0 we're screwed.
+      function newton_raphson(x, f, maxIter) {
+	  if (maxIter === undefined) maxIter = 100;
+	  df = derivative(f);
+	  for (var i = 0; i < maxIter; i++) {
+	      dx = f(x)/df(x);
+	      x = x - dx;
+	      if (Math.abs(dx) < 1e-12) {
+		  return x;
+	      }
+	  }
+	  return x;
+      }
+
+      function graph_function(f) {
+	  var canvas = $("#graph2")[0];
+	  var ctx = canvas.getContext("2d");
+	  var incr = 1/200;
+	  var x, y;
+	  
+	  ctx.strokeStyle="red";
+
+	  // Determine bounds of graph?
+	  var x1 = 0;
+	  var x2 = 3;
+
+	  // Stroke the function.
+	  ctx.beginPath();
+	  for (x = x1; x <= x2; x += incr) {
+	      y = f(x);
+	      ctx.lineTo(x, y);
+	  }
+	  y = f(x2);
+	  ctx.lineTo(x2, y);
+
+	  ctx.save();
+	  ctx.setTransform(1,0,0,1,0,0);
+	  ctx.lineWidth = 2.5;
+	  ctx.stroke();
+	  ctx.restore();
+      }
+
+      // Draw approximating rectangles for the area underneath
+      // the curve y = f(x), using n subintervals.  sample
+      // is one of {'left', 'right', 'midpoint', 'random'} and
+      // determines how heights of rectangles are calculated.
+      function draw_rectangles(f, n, sample) {
+	  var canvas = $("#graph0")[0];
+	  var ctx = canvas.getContext("2d");
+	  var x, y;
+	  var dx = 3/n;
+	  
+	  ctx.strokeStyle="gray";
+	  ctx.fillStyle="lightgray";
+	  
+	  var height;
+	  if (sample === 'right') {
+	      height = function(x) { return f(x+dx); }
+	  } else if (sample === 'left') {
+	      height = f;
+	  } else if (sample === 'midpoint') {
+	      height = function(x) { return f(x+dx/2); }
+	  } else if (sample === 'random') {
+	      height = function(x) { return f(x+dx*Math.random()); }
+	  }
+
+	  for (var i = 0; i < n; i++) {
+	      x = i*dx;
+	      y = height(x);
+		  if (y < 0) { ctx.fillStyle = "gold"; ctx.strokeStyle="orange";}
+		  else { ctx.fillStyle = "lightblue"; ctx.strokeStyle="dodgerblue";}
+	      ctx.beginPath();
+	      ctx.rect(x, 0, dx, y);
+
+	      ctx.save();
+	      ctx.setTransform(1,0,0,1,0,0);
+	      ctx.lineWidth = 1;
+	      ctx.fill();
+	      ctx.stroke();
+	      ctx.restore();
+	  }
+      }
+
+      // Approximate the area underneath the curve y = f(x)
+      // from x = a to x = b, using n rectangles.
+      function riemann(f, a, b, n, sample) {
+	  var dx = (b-a)/n;
+	  var area = 0;
+
+	  var height;
+	  if (sample === 'right') {
+	      height = function(x) { return f(x+dx); }
+	  } else if (sample === 'left') {
+	      height = f;
+	  } else if (sample === 'midpoint') {
+	      height = function(x) { return f(x+dx/2); }
+	  } else if (sample === 'random') {
+	      height = function(x) { return f(x+dx*Math.random()); }
+	  }
+
+	  for (var i = 0; i < n; i++) {
+	      var x = a + i*dx;
+	      var y = height(x);
+	      area += y*dx;
+	  }
+	  return area;
+      }
+
+      function update() {
+	  var endpoint = $('#endpoint').val();
+	  var n = parseInt($('#numRects-slider .value').text(),10);
+	  var integral_value = riemann(the_function, 0, 3, n, endpoint);
+	  if (integral_value < 0) {
+	      $("#area").html("&minus;"+Math.abs(integral_value).toFixed(5));
+	  } else {
+	      $("#area").html(integral_value.toFixed(5));
+	  }
+	  clear_graph();
+	  draw_rectangles(the_function, n, endpoint);
+	  //graph_function(the_function);
+      }
+
+    </script>
+  </head>
+  
+  <body>
+    <div id="graphdiv">
+      <canvas class="graph" id="graph0"></canvas>
+      <canvas class="graph" id="graph1"></canvas>
+      <canvas class="graph" id="graph2"></canvas>
+    </div>
+
+    <div style="font-size:32px;margin:40px 100px;">
+      Sample heights from 
+      <select id="endpoint" style="font-size:20px;border-color:#999;">
+	<option value="right">right endpoint</option>
+	<option value="left">left endpoint</option>
+	<option value="midpoint">midpoint</option>
+	<option value="random">random point</option>
+      </select>
+      of each subinterval.
+    </div>
+    
+
+    <div style="margin:40px 100px;">
+      <div id="numRects-slider" class="dragdealer">
+	<div class="handle red-bar">
+          n = <span class="value"></span>
+	</div>
+      </div>
+    </div>
+
+    <div style="font-size:32px;margin:40px 100px">
+      Sum of Area of Rectangles = <span id="area"></span>
+    </div>
+
+    <script type="text/javascript">
+      $(function() {
+	  init_canvas("#graph0", 0,3,.5,-10,10,1);
+	  init_canvas("#graph1", 0,3,.5,-10,10,1);
+	  init_canvas("#graph2", 0,3,.5,-10,10,1);
+	  draw_grid();
+	  draw_rectangles(the_function, 2, 'right');
+	  graph_function(the_function);
+
+	  new Dragdealer('numRects-slider', {
+	      animationCallback: function(x, y) {
+		  var n = Math.round(x*98)+2;
+		  $('#numRects-slider .value').text(n);
+		  update();
+	      }
+	  });
+
+	  $('#endpoint').on('change', function() {
+	      update();
+	  });
+      });
+    </script>
+
+  </body>
+
+
+</html>

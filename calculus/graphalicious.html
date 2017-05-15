@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <style type="text/css">
+      html, body { height: 95%; }
+      #graphdiv {
+	  width: 90%;
+	  height: 90%;
+	  position: relative;
+	  margin: 0 auto;
+      }
+      .graph { 
+	  width: 100%;
+	  height: 100%;
+	  border: 0px solid green;
+	  margin: 0px;
+	  position: absolute;
+	  left: 0;
+	  top: 0;
+      }
+      #graph1 { z-index: 0; }
+      #graph2 { z-index: 1; }
+      #function_div {
+	  margin-left: 100px;
+	  margin-top: 10px;
+	  float: left;
+      }
+      .function {
+	  width: 400px;
+	  height: 32px;
+	  font-size: 28px;
+	  padding: 5px;
+      }
+      .formula {
+	  font: 36px serif;
+      }
+      .formula-div {
+	  text-align: left;
+	  margin-left: 50px;
+      }
+      input::-webkit-outer-spin-button,
+      input::-webkit-inner-spin-button {
+	  -webkit-appearance: none;
+	  margin: 0;
+      }
+      input{ 
+	  color: #0000cc; 
+	  border: 1px solid #ccc;
+	  -webkit-appearance: none;
+      }
+      input:focus{ 
+	  color: #0000cc; 
+	  border: 1px solid #5ebaed;
+	  box-shadow: 0 0 10px #5ebaed;
+	  outline: none;
+	  -webkit-appearance: none;
+      }
+      input[readonly] { 
+	  outline: none;
+	  border: 1px dashed #ccc;
+	  -webkit-appearance: none;
+      }
+      input[readonly]:focus { 
+	  outline: none;
+	  border: 1px dashed #ccc;
+	  box-shadow: none;
+	  -webkit-appearance: none;
+      }
+      .input { 
+	  font-size: 28px;
+	  width: 100px;
+	  text-align: center;
+      }
+      .medinput { 
+	  font-size: 28px;
+	  width: 200px;
+	  text-align: center;
+      }
+      .biginput { 
+	  font-size: 28px;
+	  width: 300px;
+	  text-align: center;
+      }
+      .red-bar {
+	  height: 40px;
+	  font-size: 16px;
+	  line-height: 40px;
+	  border-radius: 5px;
+      }
+      #numRects-slider {
+	  height: 50px;
+      }
+      #numRects-slider .handle {
+	  height: 50px;
+	  line-height: 50px;
+	  font-size: 24px;
+	  font-weight: bold;
+	  /*font-family: Helvetica, sans-serif;*/
+      }
+      #numRects-slider .value {
+	  padding: 0 0 0 5px;
+      }
+    </style>
+
+    <script src="http://ajax.googleapis.com/ajax/libs/jquery/2.0.0/jquery.min.js"></script>
+    <script src="touchhandler.js"></script>
+    <script src="calc.js"></script>
+    <script src="math.js"></script>
+    <script src="graph.js"></script>
+    <script type="text/javascript">
+      "use strict";
+      // Copyright 2014 Phillip Nguyen.
+      // All rights reserved.
+    </script>
+  </head>
+  
+  <body>
+    <div id="graphdiv">
+      <canvas class="graph" id="graph1"></canvas>
+    </div>
+
+    <div id="function_div">
+      <label class="function_label" for="function1">f(x)&nbsp;=&nbsp;</label><input id="function1" class="function" type="text"></input>
+    </div>
+    <div id="function_div">
+      <label class="function_label" for="function2">g(x)&nbsp;=&nbsp;</label><input id="function2" class="function" type="text"></input>
+    </div>
+
+    <script type="text/javascript">
+      $(function() {
+	  var graph = new GRAPH.Graph("#graph1");
+	  var canvas = graph.canvas();
+	  enableTouchEvents(canvas);
+	  canvas.press = graph.canvas_press.bind(graph);
+	  canvas.endPress = graph.canvas_endPress.bind(graph);
+	  canvas.drag = graph.canvas_drag.bind(graph);
+	  canvas.move = graph.canvas_move.bind(graph);
+	  
+	  graph.set_window(-12, 12, -10, 10);	  
+	  graph.redraw();
+
+	  function reset_graph() {
+	      if ($("#function1").val() == '') {
+		  graph.functions.f = false;
+	      } else {
+		  graph.functions.f = CALC.parse($("#function1").val());
+		  if (!graph.functions.f) {
+		      $("#function1").css({'background-color': 'pink'});
+		  } else {
+		      $("#function1").css({'background-color': 'transparent'});
+		  }
+	      }
+
+	      if ($("#function2").val() == '') {
+		  graph.functions.g = false;
+	      } else {
+		  graph.functions.g = CALC.parse($("#function2").val());
+		  if (!graph.functions.g) {
+		      $("#function2").css({'background-color': 'pink'});
+		  } else {
+		      $("#function2").css({'background-color': 'transparent'});
+		  }
+	      }
+
+	      graph.redraw();
+	  }
+	      
+	  $("#function1").change(reset_graph);
+	  $("#function2").change(reset_graph);
+
+	  // Need this so that dragging outside of canvas element and then releasing
+	  // mouse doesn't trick canvas into thinking mouse is still down.
+	  $(document).mouseup(function() { drag_point = false; });
+
+	  $(window).resize(function() {
+	      graph.resize();
+	      reset_graph();
+	  });
+	  
+	  // Set function label to same font family and size as is used for the input text.
+	  // Lucida Grande in Mac OS X Safari, but probably varies from system to system.
+	  var elt = $("#function1");
+	  $(".function_label").css({"font-family": elt.css("font-family"), "font-size": elt.css("font-size")});
+      });
+    </script>
+
+  </body>
+
+
+</html>
