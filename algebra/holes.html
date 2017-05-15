@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Vertical Asymptotes and Holes</title>
+    <style type="text/css">
+      html, body { height: 95%; }
+      #graphdiv {
+	  width: 400px;
+	  height: 400px;
+	  position: relative;
+	  margin: 0 auto;
+      }
+      .graph { 
+	  width: 100%;
+	  height: 100%;
+	  border: 0px solid gray;
+	  margin: 0px;
+	  position: absolute;
+	  left: 0;
+	  top: 0;
+      }
+      #graph1 { z-index: 0; }
+      #graph2 { z-index: 1; }
+      .formula {
+	  font: 32px serif;
+      }
+      .formula-div {
+	  text-align: left;
+	  margin-left: 50px;
+      }
+      input::-webkit-outer-spin-button,
+      input::-webkit-inner-spin-button {
+	  -webkit-appearance: none;
+	  margin: 0;
+      }
+      input[type=text]{ 
+	  color: #0000cc; 
+	  border: 1px solid #ccc;
+	  -webkit-appearance: none;
+      }
+      input[type=text]:focus{ 
+	  color: #0000cc; 
+	  border: 1px solid #5ebaed;
+	  box-shadow: 0 0 10px #5ebaed;
+	  outline: none;
+	  -webkit-appearance: none;
+      }
+      input[type=text][readonly] { 
+	  outline: none;
+	  border: 1px dashed #ccc;
+	  -webkit-appearance: none;
+      }
+      input[type=text][readonly]:focus { 
+	  outline: none;
+	  border: 1px dashed #ccc;
+	  box-shadow: none;
+	  -webkit-appearance: none;
+      }
+      input[type=radio] {
+	  vertical-align: middle;
+	  margin-top: 0px;
+	  margin-bottom: 10px;
+      }
+      .input { 
+	  font-size: 32px;
+	  width: 100px;
+	  text-align: center;
+      }
+      .smallinput { 
+	  font-size: 14px;
+	  width: 20px;
+	  text-align: left;
+      }
+      .medinput { 
+	  font-size: 32px;
+	  width: 200px;
+	  text-align: center;
+      }
+      .biginput { 
+	  font-size: 32px;
+	  width: 300px;
+	  text-align: center;
+      }
+      .step {
+	  font-size: 32px;
+      }
+      .check {
+	  display: inline-block;
+	  border-radius: 50%;
+	  width: 32px;
+	  height: 32px;
+	  background-color: #00cc00;
+	  color: #ffff00;
+	  text-align: center;
+	  font-size: 26px;
+      }
+      .cross {
+	  display: inline-block;
+	  border-radius: 50%;
+	  width: 32px;
+	  height: 32px;
+	  background-color: #cc0000;
+	  color: #ff9999;
+	  text-align: center;
+	  font-size: 26px;
+      }
+      #walkthrough li {
+	  margin: 25px;
+      }
+      #zeros-list li {
+	  margin: 6px;
+      }
+      div.numer {
+	  border-bottom: 1px solid;
+	  text-align: center;
+      }
+      div.denom {
+	  text-align: center;
+      }
+      .fraction {
+	  display: inline-table;
+	  vertical-align: middle;
+      }
+      select {
+	  font-size: 24px;
+	  border: 1px solid #9C9C9C; /* crazy hack needed to make webkit change font-size */
+      }
+    </style>
+
+    <script src="http://ajax.googleapis.com/ajax/libs/jquery/2.0.0/jquery.min.js"></script>
+    <script src="calc.js"></script>
+    <script src="math.js"></script>
+    <script src="poly.js"></script>
+    <script type="text/javascript">
+      "use strict";
+      // Copyright 2014 Phillip Nguyen.
+      // All rights reserved.
+
+      var the_rat_func;
+
+      function randInt(min, max) {
+	  return Math.floor(Math.random() * (max - min + 1)) + min;
+      }
+
+      function random_rational_function() {
+	  // Want to create a rational function p(x)/q(x) such that 
+	  // p(x) = a*(x-k1)(x-k2) and q(x) = (x-k3)(x-k2)
+	  var hole = randInt(-10,10);
+	  var vasy, xint;
+	  do {
+	      vasy = randInt(-10,10);
+	  } while (vasy === hole);
+	  do {
+	      xint = randInt(-10,10);
+	  } while (xint === vasy || xint === hole);
+
+	  var numer = POLY.multiply([-hole, 1], [-xint, 1]);
+	  var denom = POLY.multiply([-hole, 1], [-vasy, 1]);
+	  return { numerator: numer, denominator: denom, hole: hole, intercept: xint, va: vasy};
+      }
+      
+      function checkStep(step) {
+	  if (isPartiallyBlankStep(step)) {
+	      unmarkWrong(step);
+	  } else if (step.checkAnswers()) {
+	      markCorrect(step);
+	      theProblem.currentStepNumber += 1;
+	      displayCurrentStep();
+	  } else {
+	      markWrong(step);
+	  }
+      }
+
+      function displayCurrentStep() {
+	  var step = theProblem["step"+theProblem.currentStepNumber];
+	  step.display();
+	  $(".ans"+step.number).change(function() { checkStep(step); });
+	  if (step.answerIDs && step.answerIDs.length > 0) {
+	      $("#"+step.answerIDs[0]).focus();
+	  }
+      }
+
+      function isPartiallyBlankStep(step) {
+	  for (var i = 0, len = step.answerIDs.length; i < len; i++) {
+	      var name = step.answerIDs[i];
+	      var answer = $("#"+name).val();
+	      if (answer === '') return true;
+	  }
+	  return false;
+      }
+
+      function unmarkWrong(step) {
+	  $(".ans"+step.number).css("background-color", "white");
+      }
+
+      function markCorrect(step) {
+	  $("#step"+step.number+"-grade").html('<div class="check">&#x2713;</div>');
+	  $(".ans"+step.number).prop('readonly', true);
+	  $("select.ans"+step.number).prop('disabled', true);
+	  $(".ans"+step.number).css("background-color", "white");
+	  $(".ans"+step.number).unbind("change");
+	  // disable unchecked readonly radio buttons
+	  $(':radio[readonly]:not(:checked)').attr('disabled', true);
+      }
+
+      function markWrong(step) {
+	  $("#step"+step.number+"-grade").html('<div class="cross">&#x2718;</div>');
+	  $(".ans"+step.number).css("background-color", "pink");
+      }
+
+      var theProblem = {currentStepNumber: 1};
+
+      theProblem.step1 = {
+	  number: 1,
+	  answerIDs: ["ans1"],
+
+	  display: function() {
+	      $("#walkthrough").append(
+		  '<li id="step1" class="step">'
+		  + 'Factor the numerator of <i>f</i>: '
+		      + '<input id="ans1" class="biginput ans1" type="text" autocomplete="off">'
+		      + ' <span id="step1-grade"></span>'		  
+		  + '</li>'
+	      );
+	  },
+
+	  checkAnswers: function() {
+	      var ans1 = $("#ans1").val();
+	      var factors = [ [-the_rat_func.intercept, 1], [-the_rat_func.hole, 1] ];
+	      var exps = [1, 1];
+	      return POLY.isFactoredForm(ans1, [1, 1], factors, exps);
+	  }
+      };
+
+      theProblem.step2 = {
+	  number: 2,
+	  answerIDs: ["ans2"],
+
+	  display: function() {
+	      $("#walkthrough").append(
+		  '<li id="step2" class="step">'
+		  + 'Factor the denominator of <i>f</i>: '
+		      + '<input id="ans2" class="biginput ans2" type="text" autocomplete="off">'
+		      + ' <span id="step2-grade"></span>'		  
+		  + '</li>'
+	      );
+	  },
+
+	  checkAnswers: function() {
+	      var ans2 = $("#ans2").val();
+	      var factors = [ [-the_rat_func.va, 1], [-the_rat_func.hole, 1] ];
+	      var exps = [1, 1];
+	      return POLY.isFactoredForm(ans2, [1, 1], factors, exps);
+	      return false;
+	  }
+      };
+
+      theProblem.step3 = {
+	  number: 3,
+	  answerIDs: ["ans3-a", "ans3-b"],
+
+	  display: function() {
+	      var xint = the_rat_func.intercept;
+	      var hole = the_rat_func.hole;
+	      var va = the_rat_func.va;
+	      var numer = '(' + POLY.toHtml([-xint, 1]) + ')(' + POLY.toHtml([-hole, 1]) + ')';
+	      var denom = '(' + POLY.toHtml([-va, 1]) + ')(' + POLY.toHtml([-hole, 1]) + ')';
+
+	      $("#step2").append(
+		  '<p>Therefore the factored form of <i>f</i> is: ' 
+		      + htmlFraction(numer, denom, '<i>f(x)</i> =')
+	      );
+
+	      $("#walkthrough").append(
+		  '<li id="step3" class="step">'
+		      + 'Write the domain of <i>f</i> using set-builder notation:<p>'
+		      + '<big>{</big> <i>x</i> <big>&#124;</big> <i>x</i> &#8800 <input id="ans3-a" class="input ans3" type="text" autocomplete="off">'
+		      + ' and <i>x</i> &#8800; <input id="ans3-b" class="input ans3" type="text" autocomplete="off"> <big>}</big>'
+		      + ' <span id="step3-grade"></span>'		  
+		      + '</li>'
+	      );
+	  },
+
+	  checkAnswers: function() {
+	      var x1 = Number($("#ans3-a").val());
+	      var x2 = Number($("#ans3-b").val());
+	      return ((x1 === the_rat_func.hole && x2 === the_rat_func.va) ||
+		      (x1 === the_rat_func.va && x2 === the_rat_func.hole))
+	  }
+      };
+
+      theProblem.step4 = {
+	  number: 4,
+	  answerIDs: ["ans4-a", "ans4-b"],
+	  
+	  display: function() {
+	      $("#walkthrough").append(
+		  '<li id="step4" class="step">'
+		      + 'The graph of <i>y=f(x)</i> has a <b>vertical asymptote</b> at '
+		      + '<i>x</i> = <input id="ans4-a" class="input ans4" type="text" autocomplete="off">'
+		      + '<br> because the corresponding factor '
+		      + '<select id="ans4-b" class="ans4">'
+		      + '<option value=""></option>'
+		      + '<option value="1">does not cancel from the denominator</option>'
+		      + '<option value="2">cancels from the denominator</option>'
+		      + '</select>'
+		      + ' <span id="step4-grade"></span>'
+		      + '</li>'
+	      );
+	  },
+	  
+	  checkAnswers: function() {
+	      var ans4a = Number($("#ans4-a").val());
+	      var ans4b = $("#ans4-b").val();
+	      return (ans4a === the_rat_func.va && ans4b === "1");
+	  }
+      };
+
+      theProblem.step5 = {
+	  number: 5,
+	  answerIDs: ["ans5-a", "ans5-b"],
+	  
+	  display: function() {
+	      $("#walkthrough").append(
+		  '<li id="step5" class="step">'
+		      + 'The graph of <i>y=f(x)</i> has a <b>hole</b> at '
+		      + '<i>x</i> = <input id="ans5-a" class="input ans5" type="text" autocomplete="off">'
+		      + '<br> because the corresponding factor '
+		      + '<select id="ans5-b" class="ans5">'
+		      + '<option value=""></option>'
+		      + '<option value="1">does not cancel from the denominator</option>'
+		      + '<option value="2">cancels from the denominator</option>'
+		      + '</select>'
+		      + ' <span id="step5-grade"></span>'
+		      + '</li>'
+	      );
+	  },
+	  
+	  checkAnswers: function() {
+	      var ans5a = Number($("#ans5-a").val());
+	      var ans5b = $("#ans5-b").val();
+	      return (ans5a === the_rat_func.hole && ans5b === "2");
+	  }
+      };
+
+      theProblem.step6 = {
+	  number: 6,
+	  answerIDs: ["ans6-a", "ans6-b"],
+	  
+	  display: function() {
+
+	      function signCharacter(x) { return (x < 0) ? '&#8722;' : '+';  }
+	      function htmlForZero(x) { return (x === 0 ? '' : ' ' + signCharacter(-x) + ' ' + Math.abs(x)); }
+	      
+	      var xint = the_rat_func.intercept;
+	      var va = the_rat_func.va;
+	      var numer = '<big>(</big><input id="ans6-a" class="input ans6" type="text" autocomplete="off">' + htmlForZero(xint) + '<big>)</big>';
+	      var denom = '<big>(</big><input id="ans6-b" class="input ans6" type="text" autocomplete="off">' + htmlForZero(va) + '<big>)</big>';
+	      
+	      $("#walkthrough").append(
+		  '<li id="step6" class="step">'
+		      + 'To find the <i>y</i>-coordinate of the hole, we plug this <i>x</i> value back'
+		      + ' in to the simplified form of <i>f</i> obtained by canceling the hole\'s factors:<p>'
+		      + htmlFraction(numer, denom, '<i>y</i> =')		  
+		      + ' <span id="step6-grade"></span>'
+		      + '</li>'
+	      );
+	  },
+	  
+	  checkAnswers: function() {
+	      var ans6a = Number($("#ans6-a").val());
+	      var ans6b = Number($("#ans6-b").val());
+	      return (ans6a === the_rat_func.hole && ans6b === the_rat_func.hole);
+	  }
+      };
+
+      theProblem.step7 = {
+	  number: 7,
+	  answerIDs: ["ans7-a", "ans7-b"],
+	  
+	  display: function() {
+	      
+	      $("#walkthrough").append(
+		  '<li id="step7" class="step">'
+		      + 'Finish simplifying and reducing the above expression for the <i>y</i>-coordinate.'
+		      + 'The hole occurs at the exact point '
+		      + '<big>(</big><input id="ans7-a" class="input ans7" type="text" autocomplete="off">, '
+		      + '<input id="ans7-b" class="input ans7" type="text" autocomplete="off"><big>)</big>'
+		      + ' <span id="step7-grade"></span>'
+		      + '</li>'
+	      );
+	  },
+	  
+	  checkAnswers: function() {
+	      var ans7a = Number($("#ans7-a").val());
+	      var ans7b = $("#ans7-b").val();
+	      var hole = the_rat_func.hole;
+	      var xint = the_rat_func.intercept;
+	      var va = the_rat_func.va;
+	      var y = MATH.rat_simplify([hole - xint, hole - va]);
+	      return (ans7a === hole && POLY.equals_simplified_rational(ans7b, y));
+	  }
+      };
+
+      theProblem.step8 = {
+	  number: 8,
+	  
+	  display: function() {
+	      $("#walkthrough").append(
+		  '<li id="step8" class="step">'
+		      + "Congratulations, you're done!"
+		      + "<br>(Reload the page to try a new problem)"
+		      + '</li>'
+	      );
+	  }
+      };
+
+      function htmlFraction(numer, denom, prefix) {
+	  var html = '<table class="fraction"><tr>';
+	  if (prefix) {
+	      html += '<td>'+prefix+'</td>';
+	  }
+	  html += '<td><div class="numer">'
+	      + numer
+	      + '</div><div class="denom">'
+	      + denom
+	      + '</div></td></tr></table>'
+	  return html;
+      }
+
+      function htmlFraction1(numer, denom, prefix) {
+	  var html = '';
+	  if (prefix) {
+	      html += prefix;
+	  }
+	  html += '<div class="fraction">';
+	  html += '<span class="numer">' + numer + '</span><br>'
+	  html += '<span class="denom">' + denom + '</span></div>'
+	  return html;
+      }
+
+      function htmlForRatFunc(f) {
+	  return htmlFraction(
+	      POLY.toHtml(f.numerator),
+	      POLY.toHtml(f.denominator),
+	      '<i>f(x)</i> ='
+	  );
+      }
+
+    </script>
+  </head>
+  
+  <body>
+
+    <div style="font-size: 30px; margin-left: 50px">
+      Consider the rational function:<br>
+      <span id="ratfunc"></span>
+    </div>
+
+    <ol id="walkthrough">  
+    </ol>
+      
+    <script type="text/javascript">
+      $(function() {
+	  the_rat_func = random_rational_function();
+	  $("#ratfunc").html(htmlForRatFunc(the_rat_func));
+	  displayCurrentStep();
+      });
+    </script>
+
+  </body>
+
+
+</html>

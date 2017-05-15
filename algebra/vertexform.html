@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <style type="text/css">
+      html, body { height: 95%; }
+      .formula {
+	  font: 40px serif;
+      }
+      .formula-div {
+	  text-align: left;
+	  margin-left: 50px;
+      }
+      input::-webkit-outer-spin-button,
+      input::-webkit-inner-spin-button {
+	  -webkit-appearance: none;
+	  margin: 0;
+      }
+      input{ 
+	  color: #0000cc; 
+	  border: 1px solid #ccc;
+	  -webkit-appearance: none;
+      }
+      input:focus{ 
+	  color: #0000cc; 
+	  border: 1px solid #5ebaed;
+	  box-shadow: 0 0 10px #5ebaed;
+	  outline: none;
+	  -webkit-appearance: none;
+      }
+      input[readonly] { 
+	  outline: none;
+	  border: 1px dashed #ccc;
+	  -webkit-appearance: none;
+      }
+      input[readonly]:focus { 
+	  outline: none;
+	  border: 1px dashed #ccc;
+	  box-shadow: none;
+	  -webkit-appearance: none;
+      }
+      .input { 
+	  font-size: 32px;
+	  width: 100px;
+	  text-align: center;
+      }
+      .medinput { 
+	  font-size: 32px;
+	  width: 200px;
+	  text-align: center;
+      }
+      .biginput { 
+	  font-size: 32px;
+	  width: 300px;
+	  text-align: center;
+      }
+      .step {
+	  font-size: 32px;
+      }
+      .check {
+	  display: inline-block;
+	  border-radius: 50%;
+	  width: 32px;
+	  height: 32px;
+	  background-color: #00cc00;
+	  color: #ffff00;
+	  text-align: center;
+	  font-size: 26px;
+      }
+      .cross {
+	  display: inline-block;
+	  border-radius: 50%;
+	  width: 32px;
+	  height: 32px;
+	  background-color: #cc0000;
+	  color: #ff9999;
+	  text-align: center;
+	  font-size: 26px;
+      }
+      #walkthrough li {
+	  margin: 25px;
+      }
+    </style>
+  
+
+    <script src="http://ajax.googleapis.com/ajax/libs/jquery/2.0.0/jquery.min.js"></script>
+    <script src="calc.js"></script>
+    <script src="math.js"></script>
+    <script src="poly.js"></script>
+    <script type="text/javascript">
+      "use strict";
+
+      var the_parabola;
+
+      function randInt(min, max) {
+	  return Math.floor(Math.random() * (max - min + 1)) + min;
+      }
+
+      function solve_quadratic(a, b, c) {
+	  var discr = b*b - 4*a*c;
+	  if (discr < 0) return [];
+	  if (discr === 0) return [-b/(2*a)];
+	  var root = Math.sqrt(discr);
+	  var zeros = [(-b+root)/(2*a), (-b-root)/(2*a)];
+	  return zeros.sort(function(a,b) { return a-b; });
+      }
+
+      function create_random_quadratic() {
+	  var q = {}
+	  q.h = randInt(-20, 20);
+	  q.k = randInt(-50, 50);
+	  q.a = randInt(-10,10)
+	  q.b = -2*q.a*q.h;
+	  q.c = q.a*q.h*q.h + q.k;
+	  q.eval = function(x) {
+	      return q.a * x * x + q.b * x + q.c;
+	  }	 
+	  return q;
+      }
+
+      function show_random_quadratic() {
+	  the_parabola = create_random_quadratic();
+	  $("#quadratic").html(htmlForPoly([the_parabola.c, the_parabola.b, the_parabola.a]));
+      }
+
+      function signCharacter(x) {
+	  if (x < 0) {
+	      return '&#8722;';
+	  } else {
+	      return '+';
+	  }
+      }
+
+      function leadingSign(x) {
+	  if (x < 0) {
+	      return '&#8722;';
+	  }
+	  return '';
+      }
+
+      function htmlForPoly(p) {
+	  var html = '';
+	  var degree = p.length - 1;
+	  var firstTerm = true;
+	  for (var i = degree; i >= 0; i--) {
+	      var coeff = p[i];
+	      if (coeff === 0) {
+		  if (firstTerm && i === 0) {
+		      html += "0";
+		  }
+		  continue;
+	      }
+	      if (firstTerm) {
+		  html += leadingSign(coeff)
+		  firstTerm = false;
+	      } else {
+		  html += " " + signCharacter(coeff) + " ";
+	      }
+	      if (Math.abs(coeff) !== 1 || i === 0) {
+		  html += Math.abs(coeff);
+	      }
+	      if (i !== 0) {
+		  html += "<i>x</i>";
+	      } 
+	      if (i > 1) {
+		  html += "<sup>" + i + "</sup>";
+	      }
+	  }
+	  return html;
+      }	  
+
+      function mark_correct(step) {
+	  $("#step"+step+"-grade").html('<div class="check">&#x2713;</div>');
+	  $(".ans"+step).prop('readonly', true);
+	  $(".ans"+step).css("background-color", "white");
+	  $(".ans"+step).unbind("change");
+      }
+
+      function mark_wrong(step) {
+	  $("#step"+step+"-grade").html('<div class="cross">&#x2718;</div>');
+	  $(".ans"+step).css("background-color", "pink");
+      }
+
+      function check_step1() {
+	  var ans1a = $("#ans1-a").val();
+
+	  if (ans1a == '') {
+	      $(".ans1").css("background-color", "white");
+	      return;
+	  }
+	  ans1a = Number(ans1a);
+	  if (ans1a === the_parabola.h) {
+	      mark_correct(1);
+	      show_step2();
+	  } else {
+	      mark_wrong(1);
+	  }
+      }
+
+      function check_step2() {
+	  var ans2a = $("#ans2-a").val();
+
+	  if (ans2a == '') {
+	      $(".ans2").css("background-color", "white");
+	      return;
+	  }
+	  ans2a = Number(ans2a);
+	  if (ans2a === the_parabola.k) {
+	      mark_correct(2);
+	      show_step3();
+	  } else {
+	      mark_wrong(2);
+	  }
+      }
+
+      function check_step3() {
+	  var ans3a = $("#ans3-a").val();
+
+	  if (ans3a == '') {
+	      $(".ans3").css("background-color", "white");
+	      return;
+	  }
+
+	  var a = [the_parabola.a, 1];
+	  var h = the_parabola.h;
+	  var k = the_parabola.k
+	  
+	  if (POLY.is_simplified_vertex_form(ans3a, a, h, k)) {
+	      mark_correct(3);
+	      show_step4();
+	  } else {
+	      mark_wrong(3);
+	  }
+      }
+      
+      function show_step2() {
+	  $("#walkthrough").append(
+	      '<li id="step2" class="step">'
+		  + 'What is the <i>y</i>-coordinate of the vertex of <i>f(x)</i>?<br>'
+		  + '<div class="formula-div">'
+		  + '<span class="formula"><i>k</i> = '
+		  + '<input id="ans2-a" class="input ans2" type="text" autocomplete="off"></input>'
+		  + '</span>'
+		  + ' <span id="step2-grade"></span>'
+		  + '</div>'
+		  + '</li>'
+	  );
+	  $(".ans2").change(check_step2);
+	  $("#ans2-a").focus();
+      }
+
+      function show_step3() {
+	  $("#walkthrough").append(
+	      '<li id="step3" class="step">'
+		  + 'Write the formula for <i>f(x)</i> in vertex form:<br>'
+		  + '(use the ^ symbol for exponents and simplify signs)<br>'
+		  + '<div class="formula-div">'
+		  + '<span class="formula"><i>f(x)</i> = '
+		  + '<input id="ans3-a" class="biginput ans3" type="text" autocomplete="off"></input>'
+		  + '</span>'
+		  + ' <span id="step3-grade"></span>'
+		  + '</div>'
+		  + '</li>'
+	  );
+	  $(".ans3").change(check_step3);
+	  $("#ans3-a").focus();
+      }
+
+      function show_step4() {
+	  $("#ans3-a").blur();
+	  $("#walkthrough").append(
+	      '<li id="step4" class="step">'
+		  + "Congratulations, you're done!"
+		  + '<br>(Reload the page to try a new problem)'
+		  + '</li>'
+	  );
+      }
+
+    </script>
+  </head>
+  
+  <body>
+
+    <div style="font-size: 32px;">
+	Consider the quadratic function:
+    </div>
+    <br>
+    <div class="formula formula-div">
+      <i>f(x)</i> = <span id="quadratic"></span>
+    </div>
+    <br>
+
+    <ol id="walkthrough">  
+    <li id="step1" class="step">
+      What is the <i>x</i>-coordinate of the vertex of <i>f(x)</i>?<br>
+      <div class="formula-div">
+	<span class="formula">
+	  <i>h</i> = <input id="ans1-a" class="input ans1" type="text" autocomplete="off"></input>
+	</span>
+	<span id="step1-grade"></span>
+      </div>
+    </li>
+    </ol>
+
+
+    <script type="text/javascript">
+      $(function() {
+	  show_random_quadratic();
+	  $(".ans1").change(check_step1);
+	  $("#ans1-a").focus();
+      });
+    </script>
+
+  </body>
+
+
+</html>

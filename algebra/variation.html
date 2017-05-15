@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Direct and Inverse Variation</title>
+    <style type="text/css">
+      html, body { height: 95%; }
+      #graphdiv {
+	  width: 400px;
+	  height: 400px;
+	  position: relative;
+	  margin: 0 auto;
+      }
+      .graph { 
+	  width: 100%;
+	  height: 100%;
+	  border: 0px solid gray;
+	  margin: 0px;
+	  position: absolute;
+	  left: 0;
+	  top: 0;
+      }
+      #graph1 { z-index: 0; }
+      #graph2 { z-index: 1; }
+      .formula {
+	  font: 36px serif;
+      }
+      .formula-div {
+	  text-align: left;
+	  margin-left: 50px;
+      }
+      input::-webkit-outer-spin-button,
+      input::-webkit-inner-spin-button {
+	  -webkit-appearance: none;
+	  margin: 0;
+      }
+      input[type=text]{ 
+	  color: #0000cc; 
+	  border: 1px solid #ccc;
+	  -webkit-appearance: none;
+      }
+      input[type=text]:focus{ 
+	  color: #0000cc; 
+	  border: 1px solid #5ebaed;
+	  box-shadow: 0 0 10px #5ebaed;
+	  outline: none;
+	  -webkit-appearance: none;
+      }
+      input[type=text][readonly] { 
+	  outline: none;
+	  border: 1px dashed #ccc;
+	  -webkit-appearance: none;
+      }
+      input[type=text][readonly]:focus { 
+	  outline: none;
+	  border: 1px dashed #ccc;
+	  box-shadow: none;
+	  -webkit-appearance: none;
+      }
+      input[type="radio"] {
+	  vertical-align: middle;
+	  margin-top: 0px;
+	  margin-bottom: 10px;
+      }
+      .input { 
+	  font-size: 28px;
+	  width: 100px;
+	  text-align: center;
+      }
+      .smallinput { 
+	  font-size: 14px;
+	  width: 20px;
+	  text-align: left;
+      }
+      .medinput { 
+	  font-size: 28px;
+	  width: 150px;
+	  text-align: center;
+      }
+      .biginput { 
+	  font-size: 28px;
+	  width: 300px;
+	  text-align: center;
+      }
+      .step {
+	  font-size: 28px;
+      }
+      .check {
+	  display: inline-block;
+	  border-radius: 50%;
+	  width: 32px;
+	  height: 32px;
+	  background-color: #00cc00;
+	  color: #ffff00;
+	  text-align: center;
+	  font-size: 26px;
+      }
+      .cross {
+	  display: inline-block;
+	  border-radius: 50%;
+	  width: 32px;
+	  height: 32px;
+	  background-color: #cc0000;
+	  color: #ff9999;
+	  text-align: center;
+	  font-size: 26px;
+      }
+      #walkthrough li {
+	  margin: 25px;
+      }
+      select {
+	  font-size: 24px;
+	  border: 1px solid #9C9C9C; /* crazy hack needed to make webkit change font-size */
+      }
+      div.numer {
+	  border-bottom: 1px solid;
+	  text-align: center;
+      }
+      div.denom {
+	  text-align: center;
+      }
+      .fraction {
+	  display: inline-table;
+	  vertical-align: middle;
+      }
+      div.radiocell {
+	  display: inline-table;
+	  width: 150px;
+      }
+    </style>
+  
+
+    <script src="http://ajax.googleapis.com/ajax/libs/jquery/2.0.0/jquery.min.js"></script>
+    <script src="calc.js"></script>
+    <script src="math.js"></script>
+    <script src="poly.js"></script>
+    <script type="text/javascript">
+      "use strict";
+      // Copyright 2014 Phillip Nguyen.
+      // All rights reserved.
+
+      function randInt(min, max) {
+	  return Math.floor(Math.random() * (max - min + 1)) + min;
+      }
+
+      function randSign() {
+	  return (2*randInt(0,1) - 1);
+      }
+
+      var the_model;
+
+      function random_variation() {
+	  var n = randInt(1,3);
+	  var k, type, f, nice_x, nice_y, other_x;
+	  if (randInt(0,1)) {
+	      type = "direct";
+	      k = randInt(12,100)/10;
+	      nice_x = randInt(5,10);
+	      do {
+		  other_x = randInt(5,10);
+	      } while (nice_x === other_x);
+	      f = function(x) { return k*Math.pow(x, n); }
+	  } else {
+	      type = "inverse";
+	      nice_x = randInt(15,50)/10;	      
+	      do {
+		  other_x = randInt(15,50)/10;	      
+	      } while (nice_x === other_x);
+
+	      var y = randInt(2,9)*10;
+	      k = y*Math.pow(nice_x, n);
+	      f = function(x) { return k/Math.pow(x, n); }
+	  }
+
+	  return {
+	      k: k,
+	      n: n,
+	      type: type,
+	      eval: f,
+	      nice_x: nice_x,
+	      nice_y: Math.round(f(nice_x)*1000)/1000,
+	      other_x: other_x
+	  }
+      }
+
+      function htmlFraction(numer, denom, prefix) {
+	  var html = '<table class="fraction"><tr>';
+	  if (prefix) {
+	      html += '<td>'+prefix+'</td>';
+	  }
+	  html += '<td><div class="numer">'
+	      + numer
+	      + '</div><div class="denom">'
+	      + denom
+	      + '</div></td></tr></table>'
+	  return html;
+      }
+
+      function signCharacter(x) {
+	  if (x < 0) {
+	      return '&#8722;';
+	  } else {
+	      return '+';
+	  }
+      }
+
+      function checkStep(step) {
+	  if (isPartiallyBlankStep(step)) {
+	      unmarkWrong(step);
+	  } else if (step.checkAnswers()) {
+	      markCorrect(step);
+	      theProblem.currentStepNumber += 1;
+	      displayCurrentStep();
+	  } else {
+	      markWrong(step);
+	  }
+      }
+
+      function displayCurrentStep() {
+	  var step = theProblem["step"+theProblem.currentStepNumber];
+	  step.display();
+	  $(".ans"+step.number).change(function() { checkStep(step); });
+	  if (step.answerIDs && step.answerIDs.length > 0) {
+	      $("#"+step.answerIDs[0]).focus();
+	  }
+      }
+
+      function isPartiallyBlankStep(step) {
+	  for (var i = 0, len = step.answerIDs.length; i < len; i++) {
+	      var name = step.answerIDs[i];
+	      var answer = $("#"+name).val();
+	      if (answer === '') return true;
+	  }
+	  return false;
+      }
+
+      function unmarkWrong(step) {
+	  $(".ans"+step.number).css("background-color", "white");
+      }
+
+      function markCorrect(step) {
+	  $("#step"+step.number+"-grade").html('<div class="check">&#x2713;</div>');
+	  $(".ans"+step.number).prop('readonly', true);
+	  $("select.ans"+step.number).prop('disabled', true);
+	  $(".ans"+step.number).css("background-color", "white");
+	  $(".ans"+step.number).unbind("change");
+	  // disable unchecked readonly radio buttons
+	  $(':radio[readonly]:not(:checked)').attr('disabled', true);
+      }
+
+      function markWrong(step) {
+	  $("#step"+step.number+"-grade").html('<div class="cross">&#x2718;</div>');
+	  $(".ans"+step.number).css("background-color", "pink");
+      }
+
+      // Returns true if a and b are within 1e-10 of each other.
+      // Useful for testing floating point numbers for equality.
+      function float_equals(a, b) {
+	  return Math.abs(a - b) < 1e-10;
+      }
+
+      var theProblem = {};
+      theProblem.step1 = {
+	  number: 1,
+	  answerIDs: ["ans1-a", "ans1-b"],
+	  
+	  display: function() {
+	      $("#walkthrough").append(
+		  '<li id="step1" class="step">'
+		      + 'Choose the correct form of the relationship between <i>y</i> and <i>x</i>:<p>'
+		      + '<form id="form1">'
+		      + '<div class="radiocell"><input type="radio" name="ans1" class="ans1" value="direct1">&nbsp;<i>y</i> = <i>kx</i></div>'
+		      + '<div class="radiocell"><input type="radio" name="ans1" class="ans1" value="direct2">&nbsp;<i>y</i> = <i>kx</i><sup>2</sup></div>'
+		      + '<div class="radiocell"><input type="radio" name="ans1" class="ans1" value="direct3">&nbsp;<i>y</i> = <i>kx</i><sup>3</sup></div><p>'
+		      + '<div class="radiocell"><input type="radio" name="ans1" class="ans1" value="inverse1">&nbsp;' + htmlFraction('<i>k</i>', '<i>x</i>', '<i>y</i> =') + '</div>'
+		      + '<div class="radiocell"><input type="radio" name="ans1" class="ans1" value="inverse2">&nbsp;' + htmlFraction('<i>k</i>', '<i>x</i><sup><small>2</small></sup>', '<i>y</i> =') + '</div>'
+		      + '<div class="radiocell"><input type="radio" name="ans1" class="ans1" value="inverse3">&nbsp;' + htmlFraction('<i>k</i>', '<i>x</i><sup><small>3</small></sup>', '<i>y</i> =') + '</div>'
+		      + '</form>'
+		      + ' <span id="step1-grade"></span>'
+		      + '</li>'
+	      );
+	  },
+
+	  checkAnswers: function() {
+	      var selected = $('input[name=ans1]:checked','#form1').val();
+	      return (selected === the_model.type + the_model.n);
+	  }
+      };
+
+      theProblem.step2 = {
+	  number: 2,
+	  answerIDs: ["ans2-a", "ans2-b"],
+	  
+	  display: function() {
+	      var formula;
+	      if (the_model.type === "direct") {
+		  formula = ['<input id="ans2-a" class="input ans2" type="text" autocomplete="off"> = ',
+			     '<i>k</i><big>(</big>',
+			     '<input id="ans2-b" class="input ans2" type="text" autocomplete="off">',
+			     '<big>)</big>'].join('');
+		  if (the_model.n > 1) {
+		      formula += '<sup><small>'+the_model.n+'</small></sup>';
+		  }
+	      } else {
+		  var numer = '<i>k</i>';
+		  var denom;
+		  var prefix = '<input id="ans2-a" class="input ans2" type="text" autocomplete="off"> = ';
+		  if (the_model.n === 1) {
+		      denom = '<input id="ans2-b" class="input ans2" type="text" autocomplete="off">';
+		  } else {
+		      denom = ['<big>(</big>',
+			       '<input id="ans2-b" class="input ans2" type="text" autocomplete="off">',
+			       '<big>)</big>',
+			       '<sup><small>'+the_model.n+'</small></sup>'].join('');
+		  }
+		  formula = htmlFraction(numer, denom, prefix);
+	      }
+
+	      $("#walkthrough").append(
+		  '<li id="step2" class="step">'
+		      + 'Substitute the given <i>x</i> and <i>y</i> into the model:<p>'
+		      + formula
+		      + ' <span id="step2-grade"></span>'
+		      + '</li>'
+	      );
+	  },
+
+	  checkAnswers: function() {
+	      var ans2a = Number($("#ans2-a").val());
+	      var ans2b = Number($("#ans2-b").val());
+
+	      return (float_equals(ans2a, the_model.nice_y) && 
+		      float_equals(ans2b, the_model.nice_x));
+	  }
+      };
+
+      theProblem.step3 = {
+	  number: 3,
+	  answerIDs: ["ans3"],
+
+	  display: function() {
+	      $("#walkthrough").append(
+		  '<li id="step3" class="step">'
+		      + 'Solve the above equation to find the constant of proportionality:<p>'
+		      + '<i>k</i> = '
+		      + '<input id="ans3" class="medinput ans3" type="text" autocomplete="off">'
+		      + ' <span id="step3-grade"></span>'
+		      + '</li>'
+	      );
+	  },
+	  
+	  checkAnswers: function() {
+	      var ans3 = Number($("#ans3").val());
+
+	      return (float_equals(ans3, the_model.k));
+	  }
+      };
+
+      theProblem.step4 = {
+	  number: 4,
+	  answerIDs: ["ans4"],
+
+	  display: function() {
+	      $("#walkthrough").append(
+		  '<li id="step4" class="step">'
+		      + 'Write out the complete formula relating <i>x</i> and <i>y</i>:<br>'
+		      + '(use the ^ symbol for exponents)<br>'
+		      + '<div class="formula-div">'
+		      + '<span class="formula"><i>y</i> = '
+		      + '<input id="ans4" class="biginput ans4" type="text" autocomplete="off">'
+		      + '</span>'
+		      + ' <span id="step4-grade"></span>'
+		      + '</div>'
+		      + '</li>'
+	      );
+	  },
+
+	  checkAnswers: function() {
+	      var ans4 = $("#ans4").val();
+	      var k = the_model.k;
+	      var n = the_model.n;
+	      
+	      if (the_model.type === 'direct') {
+		  return POLY.is_simplified_direct_variation(ans4, k, n);
+	      } else {
+		  return (POLY.is_simplified_inverse_variation(ans4, k, n) ||
+			  POLY.is_simplified_direct_variation(ans4, k, -n));
+	      }
+	  }
+      };
+
+      theProblem.step5 = {
+	  number: 5,
+	  answerIDs: ["ans5"],
+
+	  display: function() {
+	      $("#walkthrough").append(
+		  '<li id="step5" class="step">'
+		      + 'What is the approximate value of <i>y</i> when <i>x</i> is equal to ' 
+		      + the_model.other_x + '?<br>'
+		      + '(Please give your answer to the nearest hundredths place.)<p>'
+		      + '<i>y</i> = '
+		      + '<input id="ans5" class="medinput ans5" type="text" autocomplete="off">'
+		      + ' <span id="step5-grade"></span>'
+		      + '</li>'
+	      );
+	  },
+
+	  checkAnswers: function() {
+	      var ans5 = Number($("#ans5").val());
+	      var y = the_model.eval(the_model.other_x);
+
+	      return (Math.abs(y - ans5) < 0.005);
+	  }
+      };
+
+      theProblem.step6 = {
+	  number: 6,
+
+	  display: function() {
+	      $("#ans5").blur();
+	      $("#walkthrough").append(
+		  '<li id="step6" class="step">'
+		      + "Congratulations, you're done!"
+		      + "<br>(Reload the page to try a new problem)"
+		      + '</li>'
+	      );
+	  }
+      };
+
+      theProblem.currentStepNumber = 1;
+
+    </script>
+  </head>
+  
+  <body>
+    <div id="preamble" style="font-size: 30px; margin-left: 30px">
+      
+    </div>
+    
+    <ol id="walkthrough">  
+    </ol>
+
+    <script type="text/javascript">
+      $(function() {
+	  the_model = random_variation();
+	  $("#preamble").html(
+	      'Suppose that <i>y</i> varies '
+		  + (the_model.type === "direct" ? "directly" : "inversely")
+		  + ' with the '
+		  + ['zeroth', 'first', 'second', 'third'][the_model.n]
+		  + ' power of <i>x</i>.<p>'
+		  + 'Also, when <i>x</i> is ' + the_model.nice_x
+		  + ' we know that <i>y</i> is equal to ' + the_model.nice_y
+	  );
+	  displayCurrentStep();
+      });
+    </script>
+
+  </body>
+
+
+</html>

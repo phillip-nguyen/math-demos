@@ -1,0 +1,773 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>Matrix Multiplication</title>
+    <style type="text/css">
+      html, body { height: 95%; padding-left: 20px;}
+      .customInput {
+	  border: 1px solid #ccc;
+	  border-radius: 2px;
+	  box-shadow: inset 0px 1px 5px 0px lightgray;
+	  font: -moz-field;
+	  font: -webkit-small-control;
+	  padding: 2px 10px;
+	  margin: 0px;
+	  font-size: 24px;
+	  color: #0000cc;
+	  display: inline-block;
+	  line-height: 28px;
+	  height: 28px;
+	  /* Cannot have vertical-align: baseline because firefox will
+	     align the contenteditable differently depending on whether or not
+	     it is empty. Maybe this is how it is supposed to work? 
+	     http://www.w3.org/TR/2008/REC-CSS2-20080411/visudet.html#line-height
+	     If so it's kind of dumb.  Using bottom or middle at least gives somewhat
+	     consistent positioning across browsers.
+	     */
+	  vertical-align: bottom; 
+      }
+      /* This prevents linebreaks in the input fields */
+      .customInput br{
+	  display: none;
+      }
+      .customInput:focus {
+	  border: 1px solid #5ebaed;
+	  box-shadow: inset 0px 1px 5px 0px lightgray, 0 0 10px #5ebaed;
+	  outline: none;
+      }
+      .customInput[contenteditable=false] { 
+	  outline: none;
+	  border: 1px dashed #ccc;
+	  box-shadow: none;
+      }
+      .smallfont {
+	  font-size: 14px;
+	  height: 16px;
+	  padding: 2px 10px;
+      }
+      input[type="radio"] {
+	  vertical-align: middle;
+	  margin-top: 0px;
+	  margin-bottom: 10px;
+      }
+      select {
+	  font-size: 18px;
+	  border: 1px solid #9C9C9C; /* crazy hack needed to make webkit change font-size */
+	  text-align: middle;
+      }
+      div.radiocell {
+	  display: inline-table;
+	  width: 150px;
+      }
+      .plus {
+	  font-size: 24px;
+	  font-family: Arial, Helvetica, "sans-serif";
+	  margin: 0px -5px;
+      }
+      .arrow {
+	  font-size: 24px;
+	  font-family: Arial, Helvetica, "sans-serif";
+	  -webkit-transform: scale(1.5, 1); 
+	  -moz-transform: scale(1.5, 1);
+	  -ms-transform: scale(1.5, 1);
+	  -o-transform: scale(1.5, 1);
+	  transform: scale(1.5, 1);
+	  display: inline-block; /* required for scaling to work */
+	  margin: 0px 10px;
+      }
+      .matrix {
+	  font-size: 32px;
+	  margin-left: 15px;
+	  margin-right: 80px;
+	  margin-top: 40px;
+	  margin-bottom: 10px;
+      }
+      .leftBracket, .rightBracket {
+	  border-top: 3px solid black;
+	  border-bottom: 3px solid black;
+	  width: 10px;
+	  display: inline-block;
+	  vertical-align: middle;
+      }
+      .leftBracket { border-left: 4px solid black; }
+      .rightBracket { border-right: 4px solid black; }
+      .vertLine {
+	  border-left: 3px solid black;
+	  width: 0px;
+	  margin: 0px 10px;
+	  display: inline-block;
+	  vertical-align: middle;
+      }
+      .innerMatrix {
+	  display: inline-block;
+	  /* border: 1px solid red; */
+	  vertical-align: middle;
+      }
+      .matrixRow {
+	  display: inline-block;
+	  /* border: 1px solid green;*/
+	  margin: 0px;
+	  border-radius: 10px;
+      }
+      .matrixColumn {
+	  display: inline-block;
+	  /* border: 1px solid green;*/
+	  margin: 0px;
+	  border-radius: 10px;
+      }
+      .matrixEntry {
+	  display: inline-block;
+	  /*border: 1px solid blue;*/
+	  padding: 6px;
+	  margin: 8px 5px;
+	  border-radius: 5px;
+      }
+      .matrixSum {
+	  display: inline-block;
+	  /*border: 1px solid blue;*/
+	  margin: 0px 10px;
+	  border-radius: 10px;
+      }
+      .matrixSummand {
+	  display: inline-block;
+	  /*border: 1px solid red;*/
+	  padding: 6px 6px;
+	  margin: 5px 5px;
+	  border-radius: 5px;
+      }
+      .matrixInput {
+	  font-size: 24px;
+	  width: 60px;
+	  text-align: center;
+	  background-color: rgba(255,255,255,0.75);
+	  border: 1px solid #ccc;
+	  border-radius: 2px;
+      }
+      .matrixInput:focus { 
+	  border: 1px solid #5ebaed;
+	  box-shadow: 0 0 10px #5ebaed;
+	  outline: none;
+      }
+      .matrixInput[readonly] { 
+	  color: #000;
+	  outline: none;
+	  border: 1px dashed #ccc;
+      }
+      .matrixSpacer {
+	  display: inline-block;
+	  width: 20px;
+      }
+      .step {
+	  font-size: 24px;
+      }
+      .button {
+	  display: inline-block;
+	  border: 4px solid black;
+	  border-radius: 30px;
+	  font-family: Arial, Helvetica, "sans-serif";
+	  font-size: 20px;
+	  font-weight: bold;
+	  font-style: normal;
+	  text-decoration: none;
+	  text-align: center;
+	  color: black;
+	  box-shadow: 0px 6px 8px #888888;
+	  margin-left: 20px;
+	  margin-right: 20px;
+      }
+      .button:active {
+	  box-shadow: 0px 1px 5px #888888;
+	  position:relative;
+	  top:5px;
+      }
+      .button[disabled], .button[disabled]:hover { 
+	  border: 4px solid gray;
+	  background-color: #c0c0c0;
+	  text-shadow: none;
+	  color: gray;
+	  box-shadow: none;
+	  position:relative;
+	  top: 0px;
+      }
+      .greenButton {
+	  background-color: #51a027;
+      }
+      .greenButton:hover {
+	  border: 4px solid green;
+	  background-color: #41d027;
+	  text-shadow: 0px 0px 8px yellow;
+	  color: yellow;
+      }
+      .redButton {
+      	  background-color: #d04137;
+      }
+      .redButton:hover {
+	  border: 4px solid #c00000;
+	  background-color: red;
+	  text-shadow: 0px 0px 8px #ffaaaa;
+	  color: #ffaaaa;
+      }
+
+      .checkmark {
+	  display: inline-block;
+	  border-radius: 50%;
+	  width: 32px;
+	  height: 32px;
+	  background-color: #00cc00;
+	  color: #ffff00;
+	  text-align: center;
+	  font-size: 26px;
+      }
+    </style>
+
+    <script src="http://ajax.googleapis.com/ajax/libs/jquery/2.0.0/jquery.min.js"></script>
+    <script src="math.js"></script>
+    <script src="matrix.js"></script>
+    <script type="text/javascript">
+      "use strict";
+      // Copyright 2014 Phillip Nguyen.
+      // All rights reserved.
+
+      // This global variable is incremented every time we set a new tab index
+      // for an input element.
+      var tabindex = 1;
+
+      function randInt(min, max) {
+	  return Math.floor(Math.random() * (max - min + 1)) + min;
+      }
+
+      // Return an HTML string for custom input textfield replacement
+      // made up of a classed contenteditable span element.
+      // id is the id string of the element.
+      // cls is the space-separated class string of the element.
+      // The customInput class is automatically added.
+      function customInput(id, cls) {
+	  if (!cls) { cls = "customInput"; } 
+	  else { cls = "customInput " + cls; }
+	  return '<span id="'+id+'" class="'+cls+'" contenteditable></span>';
+      }
+
+      // Assign tab indices to enabled input fields in matrix.
+      function setTabIndices(name, nrows, ncols, indim) {
+	  if (indim) {
+	      // If indim is given, then assume that this is a summed matrix
+	      // and order by columns first.
+	      for (var j = 1; j <= ncols; j++) {
+		  for (var i = 1; i <= nrows; i++) {
+		      for (var k = 1; k <= indim; k++) {
+			  if (!$("#"+name+"-input"+i+j+k).prop('readonly')) {
+			      $("#"+name+"-input"+i+j+k).prop('tabindex', tabindex++);
+			  }
+		      }
+		  }
+	      }
+	  } else {
+	      for (var i = 1; i <= nrows; i++) {
+		  for (var j = 1; j <= ncols; j++) {
+		      if (!$("#"+name+"-input"+i+j).prop('readonly')) {
+			  $("#"+name+"-input"+i+j).prop('tabindex', tabindex++);
+		      }
+		  }
+	      }
+	  }
+      }
+
+      // Fills the named element with a matrix whose rows are grouped 
+      // inside a special div of class matrixRow.
+      // name is the DOM id of matrix
+      // nrows is number of rows
+      // ncols is number cols
+      function createRowHighlightedMatrix(name, nrows, ncols) {
+	  var html = '<div class="leftBracket" id="'+name+'-lb"></div>';
+	  html += '<div class="innerMatrix">';
+	  for (var i = 1; i <= nrows; i++) {
+	      html += '<div class="matrixRow" id="'+name+'-row'+i+'">';
+	      for (var j = 1; j <= ncols; j++) {
+		  html += '<div class="matrixEntry" id="'+name+'-entry'+i+j+'">';
+		  html += '<input type="text" class="matrixInput" id="'+name+'-input'+i+j+'" autocomplete="off">';
+		  html += '</div>';
+	      }
+	      html += '</div><br>'
+	  }
+	  html += '</div>';
+	  html += '<div class="rightBracket" id="'+name+'-rb"></div>';
+
+	  // Fill the DOM with html.
+	  $('#'+name).html(html);
+
+	  // Resize the left and right brackets to fit the matrix height.
+	  var height = $('#'+name).height();
+	  $('#'+name+'-lb').height(height);
+	  $('#'+name+'-rb').height(height);
+
+	  setTabIndices(name, nrows, ncols);
+      }
+
+      // Fills the named element with a matrix whose columns are grouped 
+      // inside a special div of class matrixColumn.
+      // name is the DOM id of matrix
+      // nrows is number of rows
+      // ncols is number cols
+      function createColumnHighlightedMatrix(name, nrows, ncols) {
+	  var html = '<div class="leftBracket" id="'+name+'-lb"></div>';
+	  html += '<div class="innerMatrix">';
+	  for (var j = 1; j <= ncols; j++) {
+	      html += '<div class="matrixColumn" id="'+name+'-col'+j+'">';
+	      for (var i = 1; i <= nrows; i++) {
+		  html += '<div class="matrixEntry" id="'+name+'-entry'+i+j+'">';
+		  html += '<input type="text" class="matrixInput" id="'+name+'-input'+i+j+'" autocomplete="off">';
+		  html += '</div><br>';
+	      }
+	      html += '</div>'
+	  }
+	  html += '</div>';
+	  html += '<div class="rightBracket" id="'+name+'-rb"></div>';
+
+	  // Fill the DOM with html.
+	  $('#'+name).html(html);
+
+	  // Resize the left and right brackets to fit the matrix height.
+	  var height = $('#'+name).height();
+	  $('#'+name+'-lb').height(height);
+	  $('#'+name+'-rb').height(height);
+
+	  setTabIndices(name, nrows, ncols);
+      }
+
+      // Fills the named element with a matrix representing 
+      // an intermediate step towards finding the product of two matrices.
+      // name is DOM id of matrix
+      // nrows is number of rows
+      // ncols is number of cols
+      // indim is the inner dimension of the factor matrices
+      // mA is DOM id of left factor matrix
+      // mB is DOM id of right factor matrix
+      function createSummedMatrix(name, nrows, ncols, indim, mA, mB) {
+	  var html = '<div class="leftBracket" id="'+name+'-lb"></div>';
+	  html += '<div class="innerMatrix">';
+	  for (var i = 1; i <= nrows; i++) {
+	      html += '<div class="matrixRow" id="'+name+'-row'+i+'">';
+	      for (var j = 1; j <= ncols; j++) {
+		  html += '<div class="matrixSum" id="'+name+'-sum'+i+j+'">';
+		  var terms = [];
+		  for (var k = 1; k <= indim; k++) {
+		      terms.push('<div class="matrixSummand" id="'+name+'-entry'+i+j+k+'">'
+				 + '<input type="text" class="matrixInput" id="'+name+'-input'+i+j+k+'" autocomplete="off">'
+				 + '</div>');
+		  }
+		  html += terms.join('+');
+		  html += '</div>';
+		  if (j < ncols) {
+		      html += '<div class="matrixSpacer"></div>';
+		  }
+	      }
+	      html += '</div><br>'
+	  }
+	  html += '</div>';
+	  html += '<div class="rightBracket" id="'+name+'-rb"></div>';
+
+	  // Fill DOM with html.
+	  $('#'+name).html(html);
+
+	  // Resize the left and right brackets to fit the matrix height.
+	  var height = $('#'+name).height();
+	  $('#'+name+'-lb').height(height);
+	  $('#'+name+'-rb').height(height);
+
+	  setTabIndices(name, nrows, ncols, indim);
+
+	  // Link each summand to corresponding row, column, and entries in factor matrices.
+	  for (var i = 1; i <= nrows; i++) {
+	      for (var j = 1; j <= ncols; j++) {
+		  for (var k = 1; k <= indim; k++) {
+		      (function(i, j, k) {
+			  $('#'+name+'-input'+i+j+k).focus(function() {
+			      $('#'+mA+'-row'+i).css("background-color", "pink");
+			      $('#'+mA+'-entry'+i+k).css("background-color", "DeepPink");
+			      $('#'+mB+'-col'+j).css("background-color", "SkyBlue");
+			      $('#'+mB+'-entry'+k+j).css("background-color", "blue");
+			      $('#'+name+'-sum'+i+j).css("background-color", "plum");
+			      $('#'+name+'-entry'+i+j+k).css("background-color", "DarkViolet");
+			  });
+			  $('#'+name+'-input'+i+j+k).blur(function() {
+			      $('#'+mA+'-row'+i).css("background-color", "transparent");
+			      $('#'+mA+'-entry'+i+k).css("background-color", "transparent");
+			      $('#'+mB+'-col'+j).css("background-color", "transparent");
+			      $('#'+mB+'-entry'+k+j).css("background-color", "transparent");
+			      $('#'+name+'-sum'+i+j).css("background-color", "transparent");
+			      $('#'+name+'-entry'+i+j+k).css("background-color", "transparent");
+			  });
+		      })(i, j, k);
+		  }
+	      }
+	  }
+      }
+
+      // Read the inputs of the named matrix and return as an array.
+      // matrix is an object with name, data, nrows, and ncols properties.
+      // The data property is replaced with the read-in values.
+      function readMatrix(matrix) {
+	  var m = [];
+	  for (var i = 1; i <= matrix.nrows; i++) {
+	      var row = [];
+	      for (var j = 1; j <= matrix.ncols; j++) {
+		  row.push(MATH.rat_fromstring($("#"+matrix.name+"-input"+i+j).val()));
+	      }
+	      m.push(row);
+	  }
+	  matrix.data = m;
+      }
+
+      // Returns true if all inputs of the named matrix are valid.
+      // matrix is an object with name, nrows, and ncols properties.
+      function isValidInputMatrix(matrix) {
+	  for (var i = 1; i <= matrix.nrows; i++) {
+	      for (var j = 1; j <= matrix.ncols; j++) {
+		  var txt = $("#"+matrix.name+"-input"+i+j).val();
+		  if (!txt || !MATH.rat_fromstring(txt)) return false;
+	      }
+	  }
+	  return true;
+      }
+
+      // Fills the entries of the named matrix with random numbers.
+      // matrix is an object with name, nrows, and ncols properties.
+      function fillInputMatrixRandomly(matrix) {
+	  var m = MATRIX.randMatrix(matrix.nrows, matrix.ncols);
+	  for (var i = 1; i <= matrix.nrows; i++) {
+	      for (var j = 1; j <= matrix.ncols; j++) {
+		  if (!$("#"+matrix.name+"-input"+i+j).prop('readonly')) {
+		      $("#"+matrix.name+"-input"+i+j).val(MATH.rat_tostring(m[i-1][j-1]));
+		  }
+	      }
+	  }
+      }
+
+      // Mark all input fields in the named matrix as both readonly and disabled.
+      function disableInputMatrix(matrix) {
+	  $("input[id^="+matrix.name+"-input]").prop('disabled', true);
+	  $("input[id^="+matrix.name+"-input]").prop('readonly', true);
+      }
+
+      // Computes a matrix containing lists of terms to be summed for
+      // each element in the product of matrix mA and mB.
+      // Both mA and mB should be objects with data, nrows, and ncols properties.
+      // The result is returned as a similar matrix object, which also
+      // has an indim property keeping track of inner dimensions of mA and mB.
+      function innerProductSums(mA, mB) {
+	  if (mA.ncols !== mB.nrows) return undefined;
+	  var result = [];
+	  for (var i = 0; i < mA.nrows; i++) {
+	      var row = [];
+	      for (var j = 0; j < mB.ncols; j++) {
+		  var terms = [];
+		  for (var k = 0; k < mA.ncols; k++) {
+		      terms.push(MATH.rat_mul(mA.data[i][k], mB.data[k][j]));
+		  }
+		  row.push(terms);
+	      }
+	      result.push(row);
+	  }
+	  return {data: result, nrows: mA.nrows, ncols: mB.ncols, indim: mA.ncols};
+      }
+
+      function validateSummedMatrix(matrix, cachedTerms) {
+	  var valid = true;
+	  for (var i = 1; i <= matrix.nrows; i++) {
+	      for (var j = 1; j <= matrix.ncols; j++) {
+		  for (var k = 1; k <= matrix.indim; k++) {
+		      var id = "#"+matrix.name+"-input"+i+j+k;
+		      var txt = $(id).val();
+		      if (!txt) {
+			  $(id).css("color", "black");
+			  $(id).css("text-decoration", "none");
+			  valid = false;
+			  continue;
+		      } 
+		      var entry = MATH.rat_fromstring(txt);
+		      if (MATH.rat_equals(entry, cachedTerms.data[i-1][j-1][k-1])) {
+			  $(id).css("color", "black");
+			  $(id).css("text-decoration", "none");
+		      } else {
+			  $(id).css("color", "red");
+			  $(id).css("text-decoration", "line-through");
+			  valid = false;
+		      }
+		  }
+	      }
+	  }
+	  return valid;
+      }
+
+      function validateProductMatrix(matrix, product) {
+	  var valid = true;
+	  for (var i = 1; i <= matrix.nrows; i++) {
+	      for (var j = 1; j <= matrix.ncols; j++) {
+		  var id = "#"+matrix.name+"-input"+i+j;
+		  var txt = $(id).val();
+		  if (!txt) {
+		      $(id).css("color", "black");
+		      $(id).css("text-decoration", "none");
+		      valid = false;
+		      continue;
+		  }
+		  var entry = MATH.rat_fromstring(txt);
+		  if (MATH.rat_equals(entry, product.data[i-1][j-1])) {
+		      $(id).css("color", "black");
+		      $(id).css("text-decoration", "none");
+		  } else {
+		      $(id).css("color", "red");
+		      $(id).css("text-decoration", "line-through");
+		      valid = false;
+		  }
+	      }
+	  }
+	  return valid;
+      }
+
+      var matrixA = {name: "matA", data: null, nrows: 3, ncols: 4};
+      var matrixB = {name: "matB", data: null, nrows: 4, ncols: 2};
+      
+      function resizeInputMatrices() {
+	  matrixA.nrows = Number($("#nrowsA").val());
+	  matrixA.ncols = Number($("#ncolsA").val());
+	  matrixB.nrows = Number($("#nrowsB").val());
+	  matrixB.ncols = Number($("#ncolsB").val());
+
+	  createRowHighlightedMatrix(matrixA.name, matrixA.nrows, matrixA.ncols);
+	  createColumnHighlightedMatrix(matrixB.name, matrixB.nrows, matrixB.ncols);
+
+	  // Bind change event to every matrix element input field
+	  // This needs to happen every time the matrices are resized.
+	  $("input[id^=matA-input]").change(function() {
+	      $("#beginButton").prop('disabled', !(isValidInputMatrix(matrixA) && isValidInputMatrix(matrixB)));
+	  });
+	  $("input[id^=matB-input]").change(function() {
+	      $("#beginButton").prop('disabled', !(isValidInputMatrix(matrixA) && isValidInputMatrix(matrixB)));
+	  });
+      }
+ 
+    </script>
+  </head>
+  
+  <body>
+    <div id="preamble" style="font-size: 32px; margin-left: 60px; margin-right: 80px;">
+      Matrix Multiplication
+      <div id="preamble" style="font-size: 20px;">
+	for the young and old
+      </div>
+    </div>
+    
+    <p></p>
+      
+    <div style="font-size: 24px; margin-left: 60px;">
+    I want to multiply a 
+    <select id="nrowsA" class="sizeSelect" autocomplete="off">
+      <option value="1">1</option>
+      <option value="2" selected>2</option>
+      <option value="3">3</option>
+      <option value="4">4</option>
+      <option value="5">5</option>
+    </select>
+    &times;
+    <select id="ncolsA" class="sizeSelect" autocomplete="off">
+      <option value="1">1</option>
+      <option value="2">2</option>
+      <option value="3" selected>3</option>
+      <option value="4">4</option>
+      <option value="5">5</option>
+    </select>
+    matrix by a
+    <select id="nrowsB" class="sizeSelect" autocomplete="off">
+      <option value="1">1</option>
+      <option value="2">2</option>
+      <option value="3" selected>3</option>
+      <option value="4">4</option>
+      <option value="5">5</option>
+    </select>
+    &times;
+    <select id="ncolsB" class="sizeSelect" autocomplete="off">
+      <option value="1">1</option>
+      <option value="2" selected>2</option>
+      <option value="3">3</option>
+      <option value="4">4</option>
+      <option value="5">5</option>
+    </select>
+    matrix.
+    </div>
+
+    <p></p>
+
+    <div id="matA" style="font-size: 32px; margin-left: 55px; display:inline-block; white-space: nowrap;"></div>
+
+    <span style="font-size: 64px; vertical-align: middle;">&middot;</span>
+
+    <div id="matB" style="font-size: 32px; margin-left: 0px; display:inline-block; white-space: nowrap;"></div>
+
+    <p></p>
+
+    <div id="begin" style="margin-left:75px;">
+      <input id="beginButton" type="button" class="button greenButton" value="Begin" disabled tabindex="0" autocomplete="off">
+      <input id="randButton" type="button" class="button redButton" value="Randomize" tabindex="0" autocomplete="off">
+    </div>
+      
+    <p>&nbsp;</p>
+      
+    
+    
+    <script type="text/javascript">
+      // Note to self:
+      // All initial inputs must have the attribute autocomplete="off"
+      // otherwise firefox by default will restore them with whatever settings they
+      // currently have when you refresh the page (which is stupid).
+      
+      $(function() {
+	  // Some code to force contenteditable to trigger 'change' events.
+	  // http://stackoverflow.com/questions/1391278/contenteditable-change-events
+	  $('body').on('focus', '[contenteditable]', function() {
+	      var $this = $(this);
+	      $this.data('before', $this.html());
+	      return $this;
+	  }).on('blur keyup paste input', '[contenteditable]', function() {
+	      var $this = $(this);
+	      if ($this.data('before') !== $this.html()) {
+		  $this.data('before', $this.html());
+		  $this.trigger('change');
+	      }
+	      return $this;
+	  });
+     
+
+	  $("#nrowsA").change(function() {
+	      resizeInputMatrices();
+	  });
+	  $("#ncolsA").change(function() {
+	      $("#nrowsB").val($(this).val());
+	      resizeInputMatrices();
+	  });
+	  $("#nrowsB").change(function() {
+	      $("#ncolsA").val($(this).val());
+	      resizeInputMatrices();
+	  });
+	  $("#ncolsB").change(function() {
+	      resizeInputMatrices();
+	  });
+
+
+	  // Actually create the initial two input matrices.
+	  resizeInputMatrices();
+
+
+	  // Fill matrices with random values when "Randomize" button is clicked.
+	  $("#randButton").click(function() {
+	      fillInputMatrixRandomly(matrixA);
+	      fillInputMatrixRandomly(matrixB);
+	      $("#beginButton").prop('disabled', !(isValidInputMatrix(matrixA) && isValidInputMatrix(matrixB)));
+	  });
+
+	  // Start the multiplication process when the "Begin" button is clicked.
+	  $("#beginButton").click(function() {
+
+	      // Insert placeholder div for the intermediate sum matrix and next button.
+	      $('#begin').after(
+		  '<span style="font-size: 64px; vertical-align: middle;"> = </span>'
+		      + '<div id="matC" style="font-size: 32px; margin-left: 0px; display:inline-block; white-space: nowrap;"></div>'
+		      + '<p></p>'
+		      + '<div id="next" style="margin-left:75px;">'
+		      + '<input id="nextButton" type="button" class="button greenButton" value="Next Step" disabled tabindex="0" autocomplete="off">'
+		      + '</div>'
+	      );
+
+	      var matrixC = {name: "matC", data: null, nrows: matrixA.nrows, ncols: matrixB.ncols, indim: matrixA.ncols};
+	      var matrixD = {name: "matD", data: null, nrows: matrixC.nrows, ncols: matrixC.ncols};
+
+	      // Insert HTML for sum matrix and bind focus events to highlight rows & columns.
+	      createSummedMatrix(matrixC.name, matrixC.nrows, matrixC.ncols, matrixC.indim, matrixA.name, matrixB.name);
+
+	      // Remove the begin and randomize buttons and disable the input matrices
+	      // so that they can't be edited or tabbed to.
+	      $("#begin").remove();
+
+	      disableInputMatrix(matrixA);
+	      disableInputMatrix(matrixB);
+	      $("#nrowsA").prop('disabled', true);
+	      $("#ncolsA").prop('disabled', true);
+	      $("#nrowsB").prop('disabled', true);
+	      $("#ncolsB").prop('disabled', true);
+
+	      // Read in data from the two input matrices.
+	      readMatrix(matrixA);
+	      readMatrix(matrixB);
+	      
+	      var cachedTerms = innerProductSums(matrixA, matrixB);
+
+	      // Bind function to change event of input fields in summed matrix.
+	      // Need to check if the entry is correct based on the factor matrices.
+	      // And also update the "Next Step" button so that it is enabled once
+	      // the summed matrix is completely filled in.
+	      $("input[id^=matC-input]").change(function() {
+		  $("#nextButton").prop("disabled", !validateSummedMatrix(matrixC, cachedTerms));
+	      });
+
+	      // Go to final step when next button is clicked.
+	      $("#nextButton").click(function() {
+		  disableInputMatrix(matrixC);
+
+		  $("#next").after(
+		      '<span style="font-size: 64px; vertical-align: middle;"> = </span>'
+			  + '<div id="matD" style="font-size: 32px; margin-left: 0px; display:inline-block; white-space: nowrap"></div>'
+		  );
+
+		  // Insert HTML for the final product matrix.
+		  createRowHighlightedMatrix("matD", matrixC.nrows, matrixC.ncols);
+
+		  // Remove the next button.
+		  $("#next").remove();
+
+
+		  // Compute the actual product of the two matrices.
+		  var product = {data: MATRIX.multiply(matrixA.data, matrixB.data),
+				 nrows: matrixC.nrows, ncols: matrixC.ncols};
+
+		  // Link entries in product matrix to sums in intermediate matrix.
+		  for (var i = 1; i <= product.nrows; i++) {
+		      for (var j = 1; j <= product.ncols; j++) {
+			  (function(i, j) {
+			      $("#matD-input"+i+j).focus(function() {
+				  $("#"+matrixC.name+"-sum"+i+j).css("background-color", "plum");
+				  $('#'+matrixA.name+'-row'+i).css("background-color", "pink");
+				  $('#'+matrixB.name+'-col'+j).css("background-color", "SkyBlue");
+			      });
+			      $("#matD-input"+i+j).blur(function() {
+				  $("#"+matrixC.name+"-sum"+i+j).css("background-color", "transparent");
+				  $('#'+matrixA.name+'-row'+i).css("background-color", "transparent");
+				  $('#'+matrixB.name+'-col'+j).css("background-color", "transparent");
+			      });
+			  })(i, j);
+		      }
+		  }
+		  
+		  // Bind function to change event of the input fields in product matrix.
+		  $("input[id^=matD-input]").change(function() {
+		      if (validateProductMatrix(matrixD, product)) {
+			  // Mark input fields as readonly, but don't disable them
+			  // so that it will still be possible to tab through them.
+			  $("input[id^=matD-input]").prop("readonly", true);
+			  // Display check mark to indicate we're done.
+			  $("#matD").after(
+			      '<div class="checkmark" style="margin-left:20px;">&#x2713;</div>'
+			  );
+		      }
+		  });
+		  
+	      });
+	  });
+
+      });
+    </script>
+
+  </body>
+
+
+</html>

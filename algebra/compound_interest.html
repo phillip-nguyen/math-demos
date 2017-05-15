@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>Compound Interest</title>
+    <style type="text/css">
+      html, body { height: 95%; }
+      .customInput {
+	  border: 1px solid #ccc;
+	  border-radius: 2px;
+	  box-shadow: inset 0px 1px 5px 0px lightgray;
+	  font: -moz-field;
+	  font: -webkit-small-control;
+	  padding: 2px 15px;
+	  margin: 0px;
+	  font-size: 28px;
+	  color: #0000cc;
+	  text-align: center;
+	  display: inline-block;
+	  height: 32px;
+	  vertical-align: text-bottom;
+      }
+      /* This prevents linebreaks in the input fields */
+      .customInput br{
+	  display: none;
+      }
+      .customInput:focus {
+	  border: 1px solid #5ebaed;
+	  box-shadow: inset 0px 1px 5px 0px lightgray, 0 0 10px #5ebaed;
+	  outline: none;	  
+      }
+      .customInput[contenteditable=false] { 
+	  outline: none;
+	  border: 1px dashed #ccc;
+	  box-shadow: none;
+      }
+      .smallfont {
+	  font-size: 14px;
+	  height: 16px;
+	  padding: 2px 10px;
+      }
+      input[type="radio"] {
+	  vertical-align: middle;
+	  margin-top: 0px;
+	  margin-bottom: 10px;
+      }
+      .step {
+	  font-size: 28px;
+      }
+      .checkmark {
+	  display: inline-block;
+	  border-radius: 50%;
+	  width: 32px;
+	  height: 32px;
+	  background-color: #00cc00;
+	  color: #ffff00;
+	  text-align: center;
+	  font-size: 26px;
+      }
+      .cross {
+	  display: inline-block;
+	  border-radius: 50%;
+	  width: 32px;
+	  height: 32px;
+	  background-color: #cc0000;
+	  color: #ff9999;
+	  text-align: center;
+	  font-size: 26px;
+      }
+      #walkthrough li {
+	  margin: 25px;
+      }
+      select {
+	  font-size: 24px;
+	  border: 1px solid #9C9C9C; /* crazy hack needed to make webkit change font-size */
+      }
+      span.fraction {
+	  display: inline-block;
+	  text-align: center;
+	  vertical-align: middle;
+	  padding: 0 5px;
+	  margin-top: -10px;
+      }
+      span.numer {
+	  padding-bottom: 0px;
+	  margin-bottom: 0px;
+      }
+      span.denom {
+	  border-top: 3px solid;
+	  display: block;
+	  margin-top: 1px;
+	  padding-top: 2px;
+	  font-size: 0px;
+      }
+      div.radiocell {
+	  display: inline-table;
+	  width: 150px;
+      }
+    </style>
+  
+
+    <script src="http://ajax.googleapis.com/ajax/libs/jquery/2.0.0/jquery.min.js"></script>
+    <script src="calc.js"></script>
+    <script src="math.js"></script>
+    <script src="poly.js"></script>
+    <script type="text/javascript">
+      "use strict";
+      // Copyright 2014 Phillip Nguyen.
+      // All rights reserved.
+
+      function randInt(min, max) {
+	  return Math.floor(Math.random() * (max - min + 1)) + min;
+      }
+
+      function randChoice(array) {
+	  return array[randInt(0, array.length-1)];
+      }
+
+      var compound_interest;
+
+      function random_interest_problem() {
+	  var P = 25*randInt(43,500);
+	  var r = randInt(15, 98)/1000;
+	  var n = randChoice([1, 2, 4, 12, 52, 365]);
+	  var t = randInt(10, 50);
+	  var A = P*Math.pow(1 + r/n, n*t);
+	  return { P: P, r: r, n: n, t: t, A: A };
+      }
+
+      function random_purchasable() {
+	  var items = ["a wax model of Ernie Hudson", "a personal submarine", "a pet elephant and teach it to rollerskate",
+		       "the world's largest pizza", "a working computer made entirely of chocolate", 
+		       "a geodesic dome to replace the roof of your house", "a robotic exoskeleton",
+		       "an extremely fashionable hat", "four thousand trained bees", "real estate on the moon", 
+		       "Mark Zuckerberg's left shoe", "an artificially intelligent trash can",
+		       "a mail-order alligator", "exclusive rights to the concept of 'pudding'", "a party hovercraft",
+		       "a 1&frasl;32 scale model of Rhode Island constructed from LEGO bricks", "a new cellphone", "a 900 inch flat screen television", 
+		       "a lifetime supply of snakes", "controlling stock in an ice cream factory", 
+		       "television air-time for a 30-second attack commercial against your former high-school nemesis", 
+		       "a genetically engineered glow-in-the-dark kitten", "a carbon-fiber toe replacement",
+		       "a hot-air balloon ride across the Atlantic Ocean", "a bacon-scented votive candle",
+		       "motorized unicycle", "a jar of limited edition peanut butter", "an elaborate dinosaur costume",
+		       "a cyborg helper monkey", "a miniature horse that knows how to factor polynomials",
+		       "hand-woven leopard-print car seat covers", "a company of interpretive dancers",
+		       "the dictatorship of a small country", "a really expensive iPhone app", "the pickled brain of William Howard Taft",
+		       "a dead grasshopper placed inside a small tupperware by Damien Hirst", "the cremated remains of an alien dignitary",
+		       "the unknown contents of an abandoned storage locker", "an oil derrick for your backyard",
+		       "a full-body tattoo depicting your favorite scenes from the movie <i>My Cousin Vinny</i>",
+		       "an inflatable treehouse", "a fancy retractable pen", "solar-powered running shoes",
+		       "a mini-fridge that lives inside of your regular refrigerator", "a mini Faberg&eacute; egg",
+		      ];
+	  return randChoice(items);
+      }
+
+      function htmlFraction(numer, denom) {
+	  var html = '<span class="fraction">'
+	      + '<span class="numer">' + numer + '</span>'
+	      + '<span class="denom">' + denom + '</span>'
+	      + '</span>'
+	  return html;
+      }
+
+      function checkStep(step) {
+	  if (isPartiallyBlankStep(step)) {
+	      unmarkWrong(step);
+	  } else if (step.checkAnswers()) {
+	      markCorrect(step);
+	      theProblem.currentStepNumber += 1;
+	      displayCurrentStep();
+	  } else {
+	      markWrong(step);
+	  }
+      }
+
+      function displayCurrentStep() {
+	  var step = theProblem["step"+theProblem.currentStepNumber];
+	  var stepClass = ".ans"+step.number;
+	  step.display();
+	  // Set up different event handlers to check answers.
+	  // For customInput class, we check on blur or keydown (enter).
+	  // For input elements we check on change event.
+	  $(".customInput"+stepClass).blur(function() { 
+	      checkStep(step); 
+	  });
+	  $(".customInput"+stepClass).keydown(function(e) {
+	      if (e.which === 13) {
+		  e.preventDefault();
+		  checkStep(step); 
+	      }
+	  });
+	  $("input"+stepClass).change(function() { 
+	      checkStep(step); 
+	  });
+	  // Focus on the first text entry element available.
+	  if (step.answerIDs && step.answerIDs.length > 0) {
+	      $("#"+step.answerIDs[0]).focus();
+	  }
+      }
+
+      // This function returns true if any of the entry fields for the
+      // current step are blank.  We use this as a check to avoid
+      // marking wrong answers that aren't yet completely finished.
+      function isPartiallyBlankStep(step) {
+	  for (var i = 0, len = step.answerIDs.length; i < len; i++) {
+	      var name = step.answerIDs[i];
+	      var answer = $("#"+name).val() || $("#"+name).text();
+	      if (answer === '') return true;
+	  }
+	  return false;
+      }
+
+      function unmarkWrong(step) {
+	  $(".ans"+step.number).css("background-color", "white");
+      }
+
+      function markCorrect(step) {
+	  $("#step"+step.number+"-grade").html('<div class="checkmark">&#x2713;</div>');
+	  $(".ans"+step.number).prop('contenteditable', false);
+	  $("select.ans"+step.number).prop('disabled', true);
+	  $(".ans"+step.number).css("background-color", "white");
+	  $(".ans"+step.number).unbind("blur keydown change");
+	  // Disable unchecked radio buttons
+	  $('.ans'+step.number+':radio:not(:checked)').attr('disabled', true);
+      }
+
+      function markWrong(step) {
+	  $("#step"+step.number+"-grade").html('<div class="cross">&#x2718;</div>');
+	  $(".ans"+step.number).css("background-color", "pink");
+      }
+
+      // Return an HTML string for custom input textfield replacement
+      // made up of a classed contenteditable span element.
+      // id is the id string of the element.
+      // cls is the space-separated class string of the element.
+      // The customInput class is automatically added.
+      function customInput(id, cls) {
+	  if (!cls) { cls = "customInput"; } 
+	  else { cls = "customInput " + cls; }
+	  return '<span id="'+id+'" class="'+cls+'" contenteditable></span>';
+      }
+
+      var theProblem = {};
+      var theProblemA = {};
+      var theProblemB = {};
+      theProblem.step1 = {
+	  number: 1,
+	  answerIDs: ["ans1-a", "ans1-b", "ans1-c", "ans1-d", "ans1-e"],
+	  
+	  display: function() {
+	      $("#walkthrough").append(
+		  '<li id="step1" class="step">'
+		      + 'Substitute the correct values into the compound interest formula:<p>'
+		      + '<i>A</i> = '
+		      + customInput("ans1-a", "ans1")
+		      + '<span style="font-size:60px; vertical-align:-.1em;">(</span>1 + '
+		      + htmlFraction(customInput("ans1-b", "ans1 smallfont"),
+				     customInput("ans1-c", "ans1 smallfont"))
+		      + '<span style="font-size:60px; vertical-align:-.1em;">)</span>'
+		      + '<span style="vertical-align: 1em;">'
+		      + customInput("ans1-d", "ans1 smallfont")
+		      + '<span style="vertical-align: -0.2em;">&middot;</span>'
+		      + customInput("ans1-e", "ans1 smallfont")
+		      + '</span>'
+		      + ' <span id="step1-grade"></span>'
+		      + '</li>'
+	      );
+	  },
+
+	  checkAnswers: function() {
+	      var ans1a = Number($("#ans1-a").text());
+	      var ans1b = Number($("#ans1-b").text());
+	      var ans1c = Number($("#ans1-c").text());
+	      var ans1d = Number($("#ans1-d").text());
+	      var ans1e = Number($("#ans1-e").text());
+
+	      return (ans1a === compound_interest.P &&
+		      ans1b === compound_interest.r &&
+		      ans1c === compound_interest.n &&
+		      ((ans1d === compound_interest.n && ans1e === compound_interest.t)
+		       || (ans1e === compound_interest.n && ans1d === compound_interest.t)));
+	  }
+      };
+
+      theProblem.step2 = {
+	  number: 2,
+	  answerIDs: [],
+	  
+	  display: function() {
+	      $("#walkthrough").append(
+		  '<li id="step2" class="step">'
+		      + 'How do you want to finish the rest of the problem?<p>'
+		      + '<input type="radio" name="ans2" class="ans2" value="1"> I want to work it out step-by-step.<br>'
+		      + '<input type="radio" name="ans2" class="ans2" value="2"> I\'m ready to input the answer.<br>'
+		      + '</li>'
+	      );
+	  },
+
+	  checkAnswers: function() {
+	      var selected = $('input[name=ans2][type=radio]:checked').val();
+	      if (selected === "1") {
+		  theProblem = theProblemA;
+		  theProblem.currentStepNumber = 2;		 
+	      } else{
+		  theProblem = theProblemB;
+		  theProblem.currentStepNumber = 2;
+	      }
+	      return true;
+	  }
+      };
+
+      // Version A
+
+      theProblemA.step3 = {
+	  number: 3,
+	  answerIDs: ["ans3-a", "ans3-b", "ans3-c"],
+	  
+	  display: function() {
+	      $("#walkthrough").append(
+		  '<li id="step1" class="step">'
+		      + 'Evaluate inside the parentheses and find the product in the exponent:<br>'
+		      + '(The number inside the parentheses should be exact to at least 7 decimal places)<p>'
+		      + '<i>A</i> = '
+		      + customInput("ans3-a", "ans3")
+		      + '<span style="font-size:60px; vertical-align:-.1em;">(</span>'
+		      + customInput("ans3-b", "ans3")
+		      + '<span style="font-size:60px; vertical-align:-.1em;">)</span>'
+		      + '<span style="vertical-align: 0.8em;">'
+		      + customInput("ans3-c", "ans3 smallfont")
+		      + '</span>'
+		      + ' <span id="step3-grade"></span>'
+		      + '</li>'
+	      );
+	  },
+
+	  checkAnswers: function() {
+	      var ans3a = Number($("#ans3-a").text());
+	      var ans3b = Number($("#ans3-b").text());
+	      var ans3c = Number($("#ans3-c").text());
+	      var b = 1 + compound_interest.r / compound_interest.n;
+	      var m = compound_interest.n * compound_interest.t;
+
+	      return (ans3a === compound_interest.P &&
+		      Math.abs(ans3b - b) < 0.00000005 &&
+		      ans3c === m);
+	  }
+      };
+
+      theProblemA.step4 = {
+	  number: 4,
+	  answerIDs: ["ans4-a", "ans4-b"],
+	  
+	  display: function() {
+	      $("#walkthrough").append(
+		  '<li id="step1" class="step">'
+		      + 'Exponentiate:<br>'
+		      + '<i>A</i> = '
+		      + customInput("ans4-a", "ans4")
+		      + '<span style="font-size:60px; vertical-align:-.1em;">(</span>'
+		      + customInput("ans4-b", "ans4")
+		      + '<span style="font-size:60px; vertical-align:-.1em;">)</span>'
+		      + ' <span id="step4-grade"></span>'
+		      + '</li>'
+	      );
+	  },
+
+	  checkAnswers: function() {
+	      var ans4a = Number($("#ans4-a").text());
+	      var ans4b = Number($("#ans4-b").text());
+	      var b = 1 + compound_interest.r / compound_interest.n;
+	      var m = compound_interest.n * compound_interest.t;
+	      var f = Math.pow(b, m);
+
+	      return (ans4a === compound_interest.P && 
+		      Math.abs(ans4b - f) < 0.00005);
+	  }
+      };
+
+      theProblemA.step5 = {
+	  number: 5,
+	  answerIDs: ["ans5-a"],
+	  
+	  display: function() {
+	      $("#walkthrough").append(
+		  '<li id="step5" class="step">'
+		      + 'What is the final balance of the account?<p>'
+		      + '<i>A</i> = $'
+		      + customInput("ans5-a", "ans5")
+		      + ' <span id="step5-grade"></span>'
+		      + '</li>'
+	      );
+	  },
+
+	  checkAnswers: function() {
+	      var ans5a = Number($("#ans5-a").text().replace(/,/g, ''));
+	      // Require answer to be correct to the nearest 100 cents.
+	      return (Math.abs(ans5a - compound_interest.A) < 0.5);
+	  }
+      };
+
+      theProblemA.step6 = {
+	  number: 6,
+
+	  display: function() {
+	      $("#ans5").blur();
+	      $("#walkthrough").append(
+		  '<li id="step6" class="step">'
+		      + "Congratulations, you're done!"
+		      + "<br>(Reload the page to try a new problem)"
+		      + '</li>'
+	      );
+	  }
+      };
+
+
+      // Version B
+
+      theProblemB.step3 = {
+	  number: 3,
+	  answerIDs: ["ans3-a"],
+	  
+	  display: function() {
+	      $("#walkthrough").append(
+		  '<li id="step3" class="step">'
+		      + 'Evaluate the above expression in order to find the final balance of the account:<p>'
+		      + '<i>A</i> = $'
+		      + customInput("ans3-a", "ans3")
+		      + ' <span id="step3-grade"></span>'
+		      + '</li>'
+	      );
+	  },
+
+	  checkAnswers: function() {
+	      var ans3a = Number($("#ans3-a").text().replace(/,/g, ''));
+	      // Require answer to be correct to the nearest 100 cents.
+	      return (Math.abs(ans3a - compound_interest.A) < 0.5);
+	  }
+      };
+
+      theProblemB.step4 = {
+	  number: 4,
+
+	  display: function() {
+	      $("#ans3").blur();
+	      $("#walkthrough").append(
+		  '<li id="step4" class="step">'
+		      + "Congratulations, you're done!"
+		      + "<br>(Reload the page to try a new problem)"
+		      + '</li>'
+	      );
+	  }
+      };
+
+      theProblem.currentStepNumber = 1;
+
+      function compoundString(n) {
+	  switch (n) {
+	      case 1: return "annually";
+	      case 2: return "semiannually";
+	      case 4: return "quarterly";
+	      case 12: return "monthly";
+	      case 52: return "weekly";
+	      case 365: return "daily";
+	      default: return (n + " times a year");
+	  }	      
+      }
+
+    </script>
+  </head>
+  
+  <body>
+    <div id="preamble" style="font-size: 30px; margin-left: 30px; margin-right: 80px;">
+      
+    </div>
+    
+    <ol id="walkthrough">  
+    </ol>
+
+    <script type="text/javascript">
+      $(function() {
+	  compound_interest = random_interest_problem();
+	  $("#preamble").html(
+	      'In order to save up enough money so that you can purchase '
+		  + random_purchasable() + ', you deposit $' + compound_interest.P 
+		  + ' into a savings account which earns interest at an APR of '
+		  + (compound_interest.r*100).toFixed(1) + '%'
+		  + ' compounded ' + compoundString(compound_interest.n) + '.'
+		  + ' What will be the balance in the account after '
+		  + compound_interest.t + ' years?'
+	  );
+	  displayCurrentStep();
+      });
+    </script>
+
+  </body>
+
+
+</html>

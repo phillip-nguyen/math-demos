@@ -1,0 +1,835 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>Matrix Determinants by Cofactor Expansion</title>
+    <style type="text/css">
+      html, body { height: 95%; padding-left: 20px;}
+      .customInput {
+	  border: 1px solid #ccc;
+	  border-radius: 2px;
+	  box-shadow: inset 0px 1px 5px 0px lightgray;
+	  font: -moz-field;
+	  font: -webkit-small-control;
+	  padding: 2px 10px;
+	  margin: 0px;
+	  font-size: 24px;
+	  color: #0000cc;
+	  display: inline-block;
+	  line-height: 28px;
+	  height: 28px;
+	  /* Cannot have vertical-align: baseline because firefox will
+	     align the contenteditable differently depending on whether or not
+	     it is empty. Maybe this is how it is supposed to work? 
+	     http://www.w3.org/TR/2008/REC-CSS2-20080411/visudet.html#line-height
+	     If so it's kind of dumb.  Using bottom or middle at least gives somewhat
+	     consistent positioning across browsers.
+	     */
+	  vertical-align: bottom; 
+      }
+      /* This prevents linebreaks in the input fields */
+      .customInput br{
+	  display: none;
+      }
+      .customInput:focus {
+	  border: 1px solid #5ebaed;
+	  box-shadow: inset 0px 1px 5px 0px lightgray, 0 0 10px #5ebaed;
+	  outline: none;
+      }
+      .customInput[contenteditable=false] { 
+	  outline: none;
+	  border: 1px dashed #ccc;
+	  box-shadow: none;
+      }
+      .smallfont {
+	  font-size: 14px;
+	  height: 16px;
+	  padding: 2px 10px;
+      }
+      input[type="radio"] {
+	  vertical-align: middle;
+	  margin-top: 0px;
+	  margin-bottom: 10px;
+      }
+      select {
+	  font-size: 18px;
+	  border: 1px solid #9C9C9C; /* crazy hack needed to make webkit change font-size */
+	  text-align: middle;
+      }
+      div.radiocell {
+	  display: inline-table;
+	  width: 150px;
+      }
+      .plus {
+	  font-size: 24px;
+	  font-family: Arial, Helvetica, "sans-serif";
+	  margin: 0px -5px;
+      }
+      .arrow {
+	  font-size: 24px;
+	  font-family: Arial, Helvetica, "sans-serif";
+	  -webkit-transform: scale(1.5, 1); 
+	  -moz-transform: scale(1.5, 1);
+	  -ms-transform: scale(1.5, 1);
+	  -o-transform: scale(1.5, 1);
+	  transform: scale(1.5, 1);
+	  display: inline-block; /* required for scaling to work */
+	  margin: 0px 10px;
+      }
+      .matrix {
+	  font-size: 32px;
+	  margin-left: 15px;
+	  margin-right: 80px;
+	  margin-top: 40px;
+	  margin-bottom: 10px;
+      }
+      .leftBracket, .rightBracket {
+	  border-top: 3px solid black;
+	  border-bottom: 3px solid black;
+	  width: 10px;
+	  display: inline-block;
+	  vertical-align: middle;
+      }
+      .leftBracket { border-left: 4px solid black; }
+      .rightBracket { border-right: 4px solid black; }
+      .vertLine {
+	  border-left: 3px solid black;
+	  width: 0px;
+	  margin: 0px 10px;
+	  display: inline-block;
+	  vertical-align: middle;
+      }
+      .innerMatrix {
+	  display: inline-block;
+	  /* border: 1px solid red; */
+	  vertical-align: middle;
+      }
+      .matrixRow {
+	  display: inline-block;
+	  /* border: 1px solid green;*/
+	  margin: 0px;
+	  border-radius: 10px;
+      }
+      .matrixColumn {
+	  display: inline-block;
+	  /* border: 1px solid green;*/
+	  margin: 0px;
+	  border-radius: 10px;
+      }
+      .matrixEntry {
+	  display: inline-block;
+	  /*border: 1px solid blue;*/
+	  padding: 6px;
+	  margin: 8px 5px;
+	  border-radius: 5px;
+      }
+      .matrixSum {
+	  display: inline-block;
+	  /*border: 1px solid blue;*/
+	  margin: 0px 10px;
+	  border-radius: 10px;
+      }
+      .matrixSummand {
+	  display: inline-block;
+	  /*border: 1px solid red;*/
+	  padding: 6px 6px;
+	  margin: 5px 5px;
+	  border-radius: 5px;
+      }
+      .matrixInput {
+	  font-size: 22px;
+	  width: 50px;
+	  text-align: center;
+	  background-color: rgba(255,255,255,255);
+	  border: 1px solid #ccc;
+	  border-radius: 3px;
+      }
+      .matrixInput:focus { 
+	  border: 1px solid #5ebaed;
+	  box-shadow: 0 0 10px #5ebaed;
+	  outline: none;
+      }
+      .matrixInput[readonly] { 
+	  color: #000;
+	  outline: none;
+	  border: 1px dashed #ccc;
+      }
+      .signInput {
+	  width: 20px;
+      }
+      .matrixSpacer {
+	  display: inline-block;
+	  width: 20px;
+      }
+      .step {
+	  font-size: 24px;
+      }
+      .button {
+	  display: inline-block;
+	  border: 4px solid black;
+	  border-radius: 30px;
+	  font-family: Arial, Helvetica, "sans-serif";
+	  font-size: 20px;
+	  font-weight: bold;
+	  font-style: normal;
+	  text-decoration: none;
+	  text-align: center;
+	  color: black;
+	  box-shadow: 0px 6px 8px #888888;
+	  margin-left: 20px;
+	  margin-right: 20px;
+      }
+      .button:active {
+	  box-shadow: 0px 1px 5px #888888;
+	  position:relative;
+	  top:5px;
+      }
+      .button[disabled], .button[disabled]:hover { 
+	  border: 4px solid gray;
+	  background-color: #c0c0c0;
+	  text-shadow: none;
+	  color: gray;
+	  box-shadow: none;
+	  position:relative;
+	  top: 0px;
+      }
+      .greenButton {
+	  background-color: #51a027;
+      }
+      .greenButton:hover {
+	  border: 4px solid green;
+	  background-color: #41d027;
+	  text-shadow: 0px 0px 8px yellow;
+	  color: yellow;
+      }
+      .redButton {
+      	  background-color: #d04137;
+      }
+      .redButton:hover {
+	  border: 4px solid #c00000;
+	  background-color: red;
+	  text-shadow: 0px 0px 8px #ffaaaa;
+	  color: #ffaaaa;
+      }
+      .checkmark {
+	  display: inline-block;
+	  border-radius: 50%;
+	  width: 32px;
+	  height: 32px;
+	  background-color: #00cc00;
+	  color: #ffff00;
+	  text-align: center;
+	  font-size: 26px;
+      }
+      .crossmark {
+	  display: inline-block;
+	  border-radius: 50%;
+	  width: 32px;
+	  height: 32px;
+	  background-color: #cc0000;
+	  color: #ff9999;
+	  text-align: center;
+	  font-size: 26px;
+      }
+      .parens {
+	  font-size: 32px;
+      }
+      .signLabel, .elementLabel, .minorLabel {
+	  display: inline-block;
+	  margin-top: 5px;
+	  padding: 3px;
+	  border-radius: 5px;
+	  font-size: 13px;
+	  color: #808080;
+      }
+      .sign-div {
+	  border-radius: 7px;
+	  display: inline-block; 
+	  text-align: center; 
+	  vertical-align: middle; 
+	  padding: 5px;
+      }
+      .element-div {
+	  border-radius: 7px;
+	  display: inline-block; 
+	  text-align: center; 
+	  vertical-align: middle; 
+	  padding: 5px;
+      }
+      .minor-div {
+	  border-radius: 7px;
+	  display: inline-block; 
+	  text-align: center; 
+	  vertical-align: middle; 
+      }
+
+    </style>
+
+    <script src="http://ajax.googleapis.com/ajax/libs/jquery/2.0.0/jquery.min.js"></script>
+    <script src="math.js"></script>
+    <script src="matrix.js"></script>
+    <script type="text/javascript">
+      "use strict";
+      // Copyright 2014 Phillip Nguyen.
+      // All rights reserved.
+
+      // Global variable for initial matrix.
+      var matrixA = {name: "matA", data: null, nrows: 3, ncols: 3};
+      var submatrices = [];
+
+      // This global variable is incremented every time we set a new tab index
+      // for an input element.
+      var tabindex = 1;
+
+      function randInt(min, max) {
+	  return Math.floor(Math.random() * (max - min + 1)) + min;
+      }
+
+      // Return an HTML string for custom input textfield replacement
+      // made up of a classed contenteditable span element.
+      // id is the id string of the element.
+      // cls is the space-separated class string of the element.
+      // The customInput class is automatically added.
+      function customInput(id, cls) {
+	  if (!cls) { cls = "customInput"; } 
+	  else { cls = "customInput " + cls; }
+	  return '<span id="'+id+'" class="'+cls+'" contenteditable></span>';
+      }
+
+      // Assign tab indices to enabled input fields in matrix.
+      function setTabIndices(name, nrows, ncols, indim) {
+	  if (indim) {
+	      // If indim is given, then assume that this is a summed matrix
+	      // and order by columns first.
+	      for (var j = 1; j <= ncols; j++) {
+		  for (var i = 1; i <= nrows; i++) {
+		      for (var k = 1; k <= indim; k++) {
+			  if (!$("#"+name+"-input"+i+j+k).prop('readonly')) {
+			      $("#"+name+"-input"+i+j+k).prop('tabindex', tabindex++);
+			  }
+		      }
+		  }
+	      }
+	  } else {
+	      for (var i = 1; i <= nrows; i++) {
+		  for (var j = 1; j <= ncols; j++) {
+		      if (!$("#"+name+"-input"+i+j).prop('readonly')) {
+			  $("#"+name+"-input"+i+j).prop('tabindex', tabindex++);
+		      }
+		  }
+	      }
+	  }
+      }
+
+      // Fills the named element with a matrix bracketed by vertical lines.
+      // name is the DOM id of the matrix
+      // nrows is number of rows
+      // ncols is number of cols
+      function createDeterminantMatrix(name, nrows, ncols) {
+	  var html = '<div class="vertLine" id="'+name+'-lb"></div>';
+	  html += '<div class="innerMatrix">';
+	  for (var i = 1; i <= nrows; i++) {
+	      html += '<div class="matrixRow" id="'+name+'-row'+i+'">';
+	      for (var j = 1; j <= ncols; j++) {
+		  html += '<div class="matrixEntry" id="'+name+'-entry'+i+j+'">';
+		  html += '<input type="text" class="matrixInput" id="'+name+'-input'+i+j+'" autocomplete="off">';
+		  html += '</div>';
+	      }
+	      html += '</div><br>'
+	  }
+	  html += '</div>';
+	  html += '<div class="vertLine" id="'+name+'-rb"></div>';
+
+	  // Fill the DOM with html.
+	  $('#'+name).html(html);
+
+	  // Resize the left and right brackets to fit the matrix height.
+	  var height = $('#'+name).height();
+	  $('#'+name+'-lb').height(height);
+	  $('#'+name+'-rb').height(height);
+
+	  setTabIndices(name, nrows, ncols);	  
+      }
+
+      // Fills the named element with a matrix whose rows are grouped 
+      // inside a special div of class matrixRow.
+      // name is the DOM id of matrix
+      // nrows is number of rows
+      // ncols is number cols
+      function createRowHighlightedMatrix(name, nrows, ncols) {
+	  var html = 'A = <div class="leftBracket" id="'+name+'-lb"></div>';
+	  html += '<div class="innerMatrix">';
+	  for (var i = 1; i <= nrows; i++) {
+	      html += '<div class="matrixRow" id="'+name+'-row'+i+'">';
+	      for (var j = 1; j <= ncols; j++) {
+		  html += '<div class="matrixEntry" id="'+name+'-entry'+i+j+'">';
+		  html += '<input type="text" class="matrixInput" id="'+name+'-input'+i+j+'" autocomplete="off">';
+		  html += '</div>';
+	      }
+	      html += '</div><br>'
+	  }
+	  html += '</div>';
+	  html += '<div class="rightBracket" id="'+name+'-rb"></div>';
+
+	  // Fill the DOM with html.
+	  $('#'+name).html(html);
+
+	  // Resize the left and right brackets to fit the matrix height.
+	  var height = $('#'+name).height();
+	  $('#'+name+'-lb').height(height);
+	  $('#'+name+'-rb').height(height);
+
+	  setTabIndices(name, nrows, ncols);
+      }
+
+      // Read the inputs of the named matrix and return as an array.
+      // matrix is an object with name, data, nrows, and ncols properties.
+      // The data property is replaced with the read-in values.
+      function readMatrix(matrix) {
+	  var m = [];
+	  for (var i = 1; i <= matrix.nrows; i++) {
+	      var row = [];
+	      for (var j = 1; j <= matrix.ncols; j++) {
+		  row.push(MATH.rat_fromstring($("#"+matrix.name+"-input"+i+j).val()));
+	      }
+	      m.push(row);
+	  }
+	  matrix.data = m;
+      }
+
+      // Returns true if all inputs of the named matrix are valid.
+      // matrix is an object with name, nrows, and ncols properties.
+      function isValidInputMatrix(matrix) {
+	  for (var i = 1; i <= matrix.nrows; i++) {
+	      for (var j = 1; j <= matrix.ncols; j++) {
+		  var txt = $("#"+matrix.name+"-input"+i+j).val();
+		  if (!txt || !MATH.rat_fromstring(txt)) return false;
+	      }
+	  }
+	  return true;
+      }
+
+      // Fills the entries of the named matrix with random numbers.
+      // matrix is an object with name, nrows, and ncols properties.
+      function fillInputMatrixRandomly(matrix) {
+	  var m = MATRIX.randMatrix(matrix.nrows, matrix.ncols);
+	  for (var i = 1; i <= matrix.nrows; i++) {
+	      for (var j = 1; j <= matrix.ncols; j++) {
+		  if (!$("#"+matrix.name+"-input"+i+j).prop('readonly')) {
+		      $("#"+matrix.name+"-input"+i+j).val(MATH.rat_tostring(m[i-1][j-1]));
+		  }
+	      }
+	  }
+      }
+
+      // Mark all input fields in the named matrix as both readonly and disabled.
+      function disableInputMatrix(matrix) {
+	  $("input[id^="+matrix.name+"-input]").prop('disabled', true);
+	  $("input[id^="+matrix.name+"-input]").prop('readonly', true);
+      }
+      
+      function resizeInputMatrices() {
+	  matrixA.nrows = 3;
+	  matrixA.ncols = 3;
+
+	  createRowHighlightedMatrix(matrixA.name, matrixA.nrows, matrixA.ncols);
+
+	  // Bind change event to every matrix element input field
+	  // This needs to happen every time the matrices are resized.
+	  $("input[id^=matA-input]").change(function() {
+	      $("#beginButton").prop('disabled', !(isValidInputMatrix(matrixA) && isValidInputMatrix(matrixB)));
+	  });
+      }
+
+      function signInput(id) {
+	  var html = "";
+	  html += '<div class="sign-div">'
+	      + '<input type="text" class="matrixInput signInput" id="' + id + '" autocomplete="off"><br>'
+	      + '<span class="signLabel">sign</span>'
+	      + '</div>';
+	  return html;
+      }
+
+      function elementInput(id) {
+	  var html = "";
+	  html += '<div class="element-div">'
+	      + '<span class="parens">( </span>' 
+	      + '<input type="text" class="matrixInput" id="' + id + '" autocomplete="off">'
+	      + '<span class="parens"> )</span><br>'
+	      + '<span class="elementLabel">element</span>'
+	      + '</div>';
+	  return html;
+      }
+
+      function minorInput(id) {
+	  var html = "";
+	  html += '<div class="minor-div">'
+	      + '<div id="' + id + '"></div>'
+	      + '<span class="minorLabel">minor</span>'
+	      + '</div>';
+	  return html;
+      }
+ 
+      function hspace(width) {
+	  return '<span style="width:'+width+'; display:inline-block;"></span>';
+      }
+
+
+      /***********************************************************************/
+
+      function checkStep(step) {
+	  if (isPartiallyBlankStep(step)) {
+	      unmarkWrong(step);
+	  } else if (step.checkAnswers()) {
+	      markCorrect(step);
+	      if (step.hasOwnProperty('after')) step.after();
+	      theProblem.currentStepNumber += 1;
+	      displayCurrentStep();
+	  } else {
+	      markWrong(step);
+	  }
+      }
+
+      function displayCurrentStep() {
+	  var step = theProblem["step"+theProblem.currentStepNumber];
+
+	  step.display();
+
+	  // Bind checkStep function to change event on all answer elements.
+	  for (var i = 0; i < step.answerIDs.length; i++) {
+	      var selector = '#'+step.answerIDs[i];
+	      if ($(selector).is("input, select")) {
+		  $(selector).change(function() {
+		      checkStep(step); 
+		  });
+	      }
+	  }
+
+	  // Focus on the first text entry element available.
+	  if (step.answerIDs && step.answerIDs.length > 0) {
+	      $("#"+step.answerIDs[0]).focus();
+	  }
+      }
+
+      function isPartiallyBlankStep(step) {
+	  for (var i = 0, len = step.answerIDs.length; i < len; i++) {
+	      var selector = '#'+step.answerIDs[i];
+	      var answer;
+	      if ($(selector).is("input, select")) {
+		  answer = $(selector).val();
+	      } else { // for custom input
+		  answer = $(selector).text();
+	      }
+	      if (answer === '') return true;
+	  }
+	  return false;
+      }
+
+      function unmarkWrong(step) {
+	  for (var i = 0, len = step.answerIDs.length; i < len; i++) {
+	      $('#'+step.answerIDs[i]).css("background-color", "white");
+	  }
+      }
+
+      function markCorrect(step) {
+	  $("#step"+step.number+"-grade").html('<div class="checkmark">&#x2713;</div>');
+	  unmarkWrong(step);
+	  for (var i = 0, len = step.answerIDs.length; i < len; i++) {
+	      var selector = '#'+step.answerIDs[i];
+	      if ($(selector).is("input, select")) {
+		  $(selector).prop('readonly', true);
+		  $(selector).prop('disabled', true);
+	      } else if ($(selector).hasClass("customInput")) {
+		  $(selector).prop('contenteditable', false);
+	      }
+	      $(selector).unbind('blur keydown change');
+	  }
+	  // Disable unchecked radio buttons
+	  $('.ans'+step.number+':radio:not(:checked)').attr('disabled', true);
+      }
+
+      function markWrong(step) {
+	  $("#step"+step.number+"-grade").html('<div class="crossmark">&#x2718;</div>');
+	  unmarkWrong(step);
+	  for (var i = 0, len = theProblem.wrongAnswers.length; i < len; i++) {
+	      $('#'+theProblem.wrongAnswers[i]).css("background-color", "pink");
+	  }
+      }
+
+      /***********************************************************************/
+      
+      var theProblem = {currentStepNumber: 1};
+      theProblem.step1 = {
+	  number: 1,
+	  answerIDs: ["elt1", "elt2", "elt3"],
+	  
+	  display: function() {
+	      $("#walkthrough").append(
+		  '<li id="step1" class="step">'
+		      + 'Fill in the elements above from your chosen row.'
+		      + ' <span id="step1-grade"></span>'
+		      + '</li>'
+	      );
+
+	      $("input[id^=sign]").prop("disabled", true);
+	      $("input[id^=element]").prop("disabled", false);
+	      $("input[id^=minor]").prop("disabled", true);
+	      $(".elementLabel").css("background-color", "RGB(100,200,240)");
+	      $(".elementLabel").css("color", "black");
+	  },
+
+	  checkAnswers: function() {
+	      var elt1 = MATH.rat_fromstring($("#elt1").val());
+	      var elt2 = MATH.rat_fromstring($("#elt2").val());
+	      var elt3 = MATH.rat_fromstring($("#elt3").val());
+
+	      theProblem.wrongAnswers = [];
+	      if (!MATH.rat_equals(elt1, matrixA.data[0][0])) theProblem.wrongAnswers.push("elt1");
+	      if (!MATH.rat_equals(elt2, matrixA.data[0][1])) theProblem.wrongAnswers.push("elt2");
+	      if (!MATH.rat_equals(elt3, matrixA.data[0][2])) theProblem.wrongAnswers.push("elt3");
+	      
+	      return (theProblem.wrongAnswers.length === 0);
+	  }, 
+	  
+	  after: function() {
+	      $(".elementLabel").css("background-color", "white");
+	      $(".elementLabel").css("color", "#808080");
+	  }
+      };
+
+      theProblem.step2 = {
+	  number: 2,
+	  answerIDs: ["sign1", "sign2", "sign3"],
+	  
+	  display: function() {
+	      $("#walkthrough").append(
+		  '<li id="step2" class="step">'
+		  + 'Fill in the correct signs for each cofactor.'
+		  + ' <span id="step2-grade"></span>'
+		  + '</li>'
+	      );
+
+	      $("input[id^=sign]").prop("disabled", false);
+	      $("input[id^=element]").prop("disabled", true);
+	      $("input[id^=minor]").prop("disabled", true);
+
+	      $(".signLabel").css("background-color", "RGB(100,200,240)");
+	      $(".signLabel").css("color", "black");
+	  },
+
+	  checkAnswers: function() {
+	      var trim = function(str) { return str.replace(/\s+/g, ''); } // remove spaces
+
+	      var sign1 = trim($("#sign1").val());
+	      var sign2 = trim($("#sign2").val());
+	      var sign3 = trim($("#sign3").val());
+
+	      theProblem.wrongAnswers = [];
+	      if (sign1 !== "+") { theProblem.wrongAnswers.push("sign1"); }
+	      if (sign2 !== "-") { theProblem.wrongAnswers.push("sign2"); }
+	      if (sign3 !== "+") { theProblem.wrongAnswers.push("sign3"); }
+
+	      return (theProblem.wrongAnswers.length === 0);
+	  },
+
+	  after: function() {
+	      $(".signLabel").css("background-color", "white");
+	      $(".signLabel").css("color", "#808080");
+	  }
+      };
+
+      theProblem.step3 = {
+	  number: 3,
+	  answerIDs: [],
+	  
+	  display: function() {
+	      $("#walkthrough").append(
+		  '<li id="step3" class="step">'
+		  + 'Fill in the sub-determinant entries for each minor.'
+		  + ' <span id="step3-grade"></span>'
+		  + '</input>'
+	      );
+
+	      $("li[id^=sign]").prop("disabled", true);
+	      $("input[id^=element]").prop("disabled", true);
+	      $("input[id^=minor]").prop("disabled", false);
+
+	      $(".minorLabel").css("background-color", "RGB(100,200,240)");
+	      $(".minorLabel").css("color", "black");
+
+	      for (var n=1; n<=3; n++) {
+		  if (Number($("#element"+n)) === 0) return true;
+		  $("input[id^=minor"+n+"]").change(function() { checkStep(theProblem["step3"]); });
+	      }
+
+	  },
+
+	  checkAnswers: function() {
+	      
+	      for (var n = 1; n <= 3; n++) {
+		  checkSubmatrix(n);
+	      }
+
+	  },
+
+	  after: function() {
+	      $(".minorLabel").css("background-color", "minorLabel");
+	      $(".white").css("color", "#808080");
+	  }
+      };
+
+      function checkSubmatrix(n) {
+	  // If associated element is zero, then don't bother checking
+	  // the submatrix elements, since they don't matter.
+	  if (Number($("#element"+n)) === 0) return true;
+	  var equal = true;
+	  for (var i = 1; i <= 2; i++) {
+	      for (var j = 1; j <= 2; j++) {
+		  var entry = MATH.rat_fromstring($("#minor"+n+"-entry"+i+j).val());
+		  if (!MATH.rat_equals(submatrices[n].data[i-1][j-1], entry)) {
+		      equal = false;
+		      $("#minor"+n+"-entry"+i+j).css("background-color", "red");
+		  } else {
+		      $("#minor"+n+"-entry"+i+j).css("background-color", "white");
+		  }
+	      }
+	  }
+	  return equal;
+      }
+
+      // Returns the submatrix of the given matrix m
+      // by deleting row mi and column mj.
+      function getSubmatrix(m, mi, mj) {
+	  var result = [];
+	  for (var i = 0; i < m.nrows; i++) {
+	      if (i === mi) continue;
+	      var row = [];
+	      for (var j = 0; j < m.ncols; j++) {
+		  if (j === mj) continue;
+		  row.push(m.data[i][j]);
+	      }
+	      result.push(row);
+	  }
+	  return {data: result, nrows: m.nrows-1, ncols: m.ncols-1};
+      }
+
+    </script>
+  </head>
+  
+  <body>
+    <div id="preamble" style="font-size: 32px; margin-left: 50px; margin-right: 80px;">
+      Matrix Determinants
+      <div id="preamble" style="font-size: 20px;">
+	By Expansion of Cofactors<br>
+	with your guide, Pierre-Simon Laplace
+      </div>
+    </div>
+    
+    <p></p>
+      
+    <div style="font-size: 24px; margin-left: 50px;">
+    I want to find the determinant of the following 3x3 matrix:
+    </div>
+
+    <p></p>
+
+    <div id="matA" style="font-size: 32px; margin-left: 80px; display:inline-block; white-space: nowrap;"></div>
+
+    <p></p>
+
+    <div id="begin" style="margin-left:118px;">
+      <input id="beginButton" type="button" class="button greenButton" value="Begin" disabled tabindex="0" autocomplete="off">
+      <input id="randButton" type="button" class="button redButton" value="Randomize" tabindex="0" autocomplete="off">
+    </div>
+      
+    <p></p>
+
+    <div id="expansion" style="white-space:nowrap;"></div>
+
+    <ol id="walkthrough"></ol>
+
+    <p>&nbsp;</p>
+      
+    
+    
+    <script type="text/javascript">
+      // Note to self:
+      // All initial inputs must have the attribute autocomplete="off"
+      // otherwise firefox by default will restore them with whatever settings they
+      // currently have when you refresh the page (which is stupid).
+      
+      $(function() {
+	  // Some code to force contenteditable to trigger 'change' events.
+	  // http://stackoverflow.com/questions/1391278/contenteditable-change-events
+	  $('body').on('focus', '[contenteditable]', function() {
+	      var $this = $(this);
+	      $this.data('before', $this.html());
+	      return $this;
+	  }).on('blur keyup paste input', '[contenteditable]', function() {
+	      var $this = $(this);
+	      if ($this.data('before') !== $this.html()) {
+		  $this.data('before', $this.html());
+		  $this.trigger('change');
+	      }
+	      return $this;
+	  });
+     
+	  // Create the initial input matrix.
+	  resizeInputMatrices();
+
+	  // Fill matrix with random values when "Randomize" button is clicked.
+	  $("#randButton").click(function() {
+	      fillInputMatrixRandomly(matrixA);
+	      $("#beginButton").prop('disabled', !(isValidInputMatrix(matrixA)));
+	  });
+
+
+	  // Start the multiplication process when the "Begin" button is clicked.
+	  $("#beginButton").click(function() {
+
+	      // Set up the cofactor expansion by creating inputs and determinant matrices
+	      $("#expansion").html(
+		  '<span class="parens">det(A) = </span>'
+		      + signInput("sign1") + hspace('5px')		     
+		      + elementInput("elt1") 
+		      + '<span class="parens"> &middot;</span>' 
+		      + minorInput("minor1")
+		      + hspace('5px') + signInput("sign2") + hspace('15px')
+		      + elementInput("elt2") 
+		      + '<span class="parens"> &middot;</span>' 
+		      + minorInput("minor2")
+		      + hspace('5px') + signInput("sign3") + hspace('15px')
+		      + elementInput("elt3") 
+		      + '<span class="parens"> &middot;</span>' 
+		      + minorInput("minor3")
+	      );
+	      
+	      createDeterminantMatrix("minor1", 2, 2);
+	      createDeterminantMatrix("minor2", 2, 2);
+	      createDeterminantMatrix("minor3", 2, 2);
+	      
+	      displayCurrentStep();
+
+	      // Remove the begin and randomize buttons and disable the input matrices
+	      // so that they can't be edited or tabbed to.
+	      $("#begin").remove();
+
+	      disableInputMatrix(matrixA);
+
+	      // Read in data from the input matrix.
+	      readMatrix(matrixA);
+	      
+	      // Cache the submatrices used to compute minors.
+	      submatrices[1] = getSubmatrix(matrixA, 0, 0);
+	      submatrices[2] = getSubmatrix(matrixA, 0, 1);
+	      submatrices[3] = getSubmatrix(matrixA, 0, 2);
+
+	  });
+
+      });
+    </script>
+
+  </body>
+
+
+</html>

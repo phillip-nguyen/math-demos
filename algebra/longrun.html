@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Long-run Behavior of Rational Functions</title>
+    <style type="text/css">
+      html, body { height: 95%; }
+      #graphdiv {
+	  width: 400px;
+	  height: 400px;
+	  position: relative;
+	  margin: 0 auto;
+      }
+      .graph { 
+	  width: 100%;
+	  height: 100%;
+	  border: 0px solid gray;
+	  margin: 0px;
+	  position: absolute;
+	  left: 0;
+	  top: 0;
+      }
+      #graph1 { z-index: 0; }
+      #graph2 { z-index: 1; }
+      .formula {
+	  font: 32px serif;
+      }
+      .formula-div {
+	  text-align: left;
+	  margin-left: 50px;
+      }
+      input::-webkit-outer-spin-button,
+      input::-webkit-inner-spin-button {
+	  -webkit-appearance: none;
+	  margin: 0;
+      }
+      input[type="text"]{ 
+	  color: #0000cc; 
+	  border: 1px solid #ccc;
+	  -webkit-appearance: none;
+      }
+      input[type="text"]:focus{ 
+	  color: #0000cc; 
+	  border: 1px solid #5ebaed;
+	  box-shadow: 0 0 10px #5ebaed;
+	  outline: none;
+	  -webkit-appearance: none;
+      }
+      input[type="text"][readonly] { 
+	  outline: none;
+	  border: 1px dashed #ccc;
+	  -webkit-appearance: none;
+      }
+      input[type="text"][readonly]:focus { 
+	  outline: none;
+	  border: 1px dashed #ccc;
+	  box-shadow: none;
+	  -webkit-appearance: none;
+      }
+      input[type="radio"] {
+	  vertical-align: middle;
+	  margin-top: 0px;
+	  margin-bottom: 10px;
+      }
+      .input { 
+	  font-size: 24px;
+	  width: 75px;
+	  text-align: center;
+      }
+      .smallinput { 
+	  font-size: 14px;
+	  width: 20px;
+	  text-align: left;
+      }
+      .medinput { 
+	  font-size: 24px;
+	  width: 200px;
+	  text-align: center;
+      }
+      .biginput { 
+	  font-size: 24px;
+	  width: 500px;
+	  text-align: center;
+      }
+      .step {
+	  font-size: 24px;
+      }
+      .check {
+	  display: inline-block;
+	  border-radius: 50%;
+	  width: 32px;
+	  height: 32px;
+	  background-color: #00cc00;
+	  color: #ffff00;
+	  text-align: center;
+	  font-size: 26px;
+      }
+      .cross {
+	  display: inline-block;
+	  border-radius: 50%;
+	  width: 32px;
+	  height: 32px;
+	  background-color: #cc0000;
+	  color: #ff9999;
+	  text-align: center;
+	  font-size: 26px;
+      }
+      #walkthrough li {
+	  margin: 25px;
+      }
+      #zeros-list li {
+	  margin: 6px;
+      }
+      div.numer {
+	  border-bottom: 1px solid;
+	  text-align: center;
+      }
+      div.denom {
+	  text-align: center;
+      }
+      .fraction {
+	  display: inline-table;
+	  vertical-align: middle;
+      }
+    </style>
+
+    <script src="http://ajax.googleapis.com/ajax/libs/jquery/2.0.0/jquery.min.js"></script>
+    <script src="calc.js"></script>
+    <script src="math.js"></script>
+    <script src="poly.js"></script>
+    <script type="text/javascript">
+      "use strict";
+      // Copyright 2014 Phillip Nguyen.
+      // All rights reserved.
+
+      var the_rat_func;
+
+      function randInt(min, max) {
+	  return Math.floor(Math.random() * (max - min + 1)) + min;
+      }
+
+      function random_compact_poly_of_degree(n) {
+	  // This is not particularly efficient, as it creates a zero-filled
+	  // vector to represent the polynomial, instead of only defining the
+	  // non-zero coefficients.  However I don't currently want to rewrite 
+	  // poly.js to make it work with sparsely defined polys.
+	  var coeffs = Array.apply(null, new Array(n+1)).map(Number.prototype.valueOf,0);
+	  coeffs[n] = randInt(-50,50);
+	  var num_terms = randInt(2,4);
+	  var width = Math.floor(n / (num_terms-1));
+	  for (var i = 0; i < num_terms-1; i++) {
+	      var min = i*width;
+	      var max = (i+1)*width - 1;
+	      coeffs[randInt(min, max)] = randInt(-100,100);
+	  }
+	  return coeffs;
+      }
+
+      function random_rational_function() {
+	  // Want to create a rational function p(x)/q(x) such that 
+	  // p(x) and q(x) each have at most 4 terms.  Also need to 
+	  // randomly determine relationship between degree of p & q.
+	  // Either (1) deg p = deg q, or (2) deg p < deg q, or deg p > deq q.
+	  switch(randInt(1,3)) {
+	  case 1:
+	      // Same degree on top and bottom.
+	      var degree = randInt(1,20);
+	      return { numerator: random_compact_poly_of_degree(degree),
+		       denominator: random_compact_poly_of_degree(degree) };
+	  case 2:
+	      // Smaller degree on top.
+	      var bottom = randInt(1,20);
+	      var top = randInt(0, bottom);
+	      return { numerator: random_compact_poly_of_degree(top),
+		       denominator: random_compact_poly_of_degree(bottom) };
+	  case 3:
+	      // Smaller degree on bottom.
+	      var top = randInt(2,20);
+	      var bottom = randInt(1, top);
+	      return { numerator: random_compact_poly_of_degree(top),
+		       denominator: random_compact_poly_of_degree(bottom) };
+	  }
+      }
+      
+      function checkStep(step) {
+	  if (isPartiallyBlankStep(step)) {
+	      unmarkWrong(step);
+	  } else if (step.checkAnswers()) {
+	      markCorrect(step);
+	      theProblem.currentStepNumber += 1;
+	      displayCurrentStep();
+	  } else {
+	      markWrong(step);
+	  }
+      }
+
+      function displayCurrentStep() {
+	  var step = theProblem["step"+theProblem.currentStepNumber];
+	  step.display();
+	  $(".ans"+step.number).change(function() { checkStep(step); });
+	  if (step.answerIDs && step.answerIDs.length > 0) {
+	      $("#"+step.answerIDs[0]).focus();
+	  }
+      }
+
+      function isPartiallyBlankStep(step) {
+	  for (var i = 0, len = step.answerIDs.length; i < len; i++) {
+	      var name = step.answerIDs[i];
+	      var answer = $("#"+name).val();
+	      if (answer === '') return true;
+	  }
+	  return false;
+      }
+
+      function unmarkWrong(step) {
+	  $(".ans"+step.number).css("background-color", "white");
+      }
+
+      function markCorrect(step) {
+	  $("#step"+step.number+"-grade").html('<div class="check">&#x2713;</div>');
+	  $(".ans"+step.number).prop('readonly', true);
+	  $(".ans"+step.number).css("background-color", "white");
+	  $(".ans"+step.number).unbind("change");
+	  // disable unchecked readonly radio buttons
+	  $(':radio[readonly]:not(:checked)').attr('disabled', true);
+      }
+
+      function markWrong(step) {
+	  $("#step"+step.number+"-grade").html('<div class="cross">&#x2718;</div>');
+	  $(".ans"+step.number).css("background-color", "pink");
+      }
+
+      var theProblem = {currentStepNumber: 1};
+
+      theProblem.step1 = {
+	  number: 1,
+	  answerIDs: ["ans1"],
+
+	  display: function() {
+	      $("#walkthrough").append(
+		  '<li id="step1" class="step">'
+		      + 'How do the degrees of the numerator and denominator compare?<p>'
+		      + '<form id=form1>'
+		      + '<input type="radio" name="ans1" class="ans1" value="same"> They are the <i>same</i> degree.<br>'
+		      + '<input type="radio" name="ans1" class="ans1" value="less"> The degree of the numerator is <i>smaller</i> than the degree of the denominator.<br>'
+		      + '<input type="radio" name="ans1" class="ans1" value="greater"> The degree of the numerator is <i>larger</i> than the degree of the denominator.<br>'
+		      + '</form>'
+		      + ' <span id="step1-grade"></span>'		  
+		      + '</li>'
+	      );
+	  },
+
+	  checkAnswers: function() {
+	      var degp = the_rat_func.numerator.length - 1;
+	      var degq = the_rat_func.denominator.length - 1;
+	      var selected = $('input[name=ans1]:checked','#form1').val();
+	      return ((degp === degq && selected === 'same') ||
+		      (degp < degq && selected === 'less') ||
+		      (degp > degq && selected === 'greater'))
+	  }
+      };
+
+      theProblem.step2 = {
+	  number: 2,
+	  answerIDs: ["ans2"],
+
+	  display: function() {
+	      var coeffp = the_rat_func.numerator[the_rat_func.numerator.length - 1];
+	      var coeffq = the_rat_func.denominator[the_rat_func.denominator.length - 1];
+	      var r = MATH.rat_simplify([coeffp, coeffq]);
+
+	      $("#walkthrough").append(
+		  '<li id="step2" class="step">'
+		  + 'Choose the correct long-run behavior of <i>f(x)</i>:<p>'
+		      + '<form id=form2>'
+		      + '<input type="radio" name="ans2" class="ans2" value="same"> There is a horizontal asymptote at <i>y</i> = ' + POLY.signCharacter(r[0], true) + htmlFraction(Math.abs(r[0]), r[1]) + '<br>'
+		      + '<input type="radio" name="ans2" class="ans2" value="less"> There is a horizontal asymptote at <i>y</i> = 0<br>'
+		      + '<input type="radio" name="ans2" class="ans2" value="greater"> There is no horizontal asymptote.<br>'
+		      + '</form>'
+		      + ' <span id="step2-grade"></span>'		  
+		  + '</li>'
+	      );
+	  },
+
+	  checkAnswers: function() {
+	      var degp = the_rat_func.numerator.length - 1;
+	      var degq = the_rat_func.denominator.length - 1;
+	      var selected = $('input[name=ans2]:checked','#form2').val();
+	      return ((degp === degq && selected === 'same') ||
+		      (degp < degq && selected === 'less') ||
+		      (degp > degq && selected === 'greater'))
+	  }
+      };
+
+      theProblem.step3 = {
+	  number: 3,
+	  
+	  display: function() {
+	      $("#walkthrough").append(
+		  '<li id="step3" class="step">'
+		      + "Congratulations, you're done!"
+		      + "<br>(Reload the page to try a new problem)"
+		      + '</li>'
+	      );
+	  }
+      };
+
+      function htmlFraction(numer, denom, prefix) {
+	  var html = '<table class="fraction"><tr>';
+	  if (prefix) {
+	      html += '<td>'+prefix+'</td>';
+	  }
+	  html += '<td><div class="numer">'
+	      + numer
+	      + '</div><div class="denom">'
+	      + denom
+	      + '</div></td></tr></table>'
+	  return html;
+      }
+
+      function htmlFraction1(numer, denom, prefix) {
+	  var html = '';
+	  if (prefix) {
+	      html += prefix;
+	  }
+	  html += '<div class="fraction">';
+	  html += '<span class="numer">' + numer + '</span><br>'
+	  html += '<span class="denom">' + denom + '</span></div>'
+	  return html;
+      }
+
+      function htmlForRatFunc(f) {
+	  return htmlFraction(
+	      POLY.toHtml(f.numerator),
+	      POLY.toHtml(f.denominator),
+	      '<i>f(x)</i> ='
+	  );
+      }
+
+    </script>
+  </head>
+  
+  <body>
+
+    <div style="font-size: 30px; margin-left: 50px">
+      Consider the rational function:<br>
+      <span id="ratfunc"></span>
+    </div>
+
+    <ol id="walkthrough">  
+    </ol>
+      
+    <script type="text/javascript">
+      $(function() {
+	  the_rat_func = random_rational_function();
+	  $("#ratfunc").html(htmlForRatFunc(the_rat_func));
+	  displayCurrentStep();
+      });
+    </script>
+
+  </body>
+
+
+</html>
